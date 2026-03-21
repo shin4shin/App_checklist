@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="top"
+    android:background="#CC1E1E1E"
+    android:padding="12dp">
+
+    <!-- 타이틀 + 페이지 버튼 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvSmallTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="  데일리 체크"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvSmallPageInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp"/>
+
+        <TextView
+            android:id="@+id/btnSmallPrev"
+            android:layout_width="32dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="◀"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"/>
+
+        <TextView
+            android:id="@+id/btnSmallNext"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="▶"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"/>
+    </LinearLayout>
+
+    <!-- 행 1 -->
+    <LinearLayout android:id="@+id/smallRow1"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck1" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon1" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName1" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 2 -->
+    <LinearLayout android:id="@+id/smallRow2"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck2" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon2" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName2" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 3 -->
+    <LinearLayout android:id="@+id/smallRow3"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck3" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon3" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName3" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 4 -->
+    <LinearLayout android:id="@+id/smallRow4"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck4" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon4" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName4" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 5 -->
+    <LinearLayout android:id="@+id/smallRow5"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck5" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon5" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName5" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 6 -->
+    <LinearLayout android:id="@+id/smallRow6"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck6" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon6" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName6" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 7 -->
+    <LinearLayout android:id="@+id/smallRow7"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck7" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon7" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName7" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 8 -->
+    <LinearLayout android:id="@+id/smallRow8"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck8" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon8" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName8" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- 행 9 -->
+    <LinearLayout android:id="@+id/smallRow9"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/smallCheck9" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp"/>
+        <ImageView android:id="@+id/smallIcon9" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/smallName9" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="20sp" android:textColor="#FFFFFF" android:maxLines="1" android:ellipsize="end"/>
+    </LinearLayout>
+
+</LinearLayout>

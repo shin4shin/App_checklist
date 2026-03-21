@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">HomeworkTracker</string>
+    <string name="shortcut_short">숙제 완료</string>
+    <string name="shortcut_long">숙제 완료 표시하기</string>
+</resources>

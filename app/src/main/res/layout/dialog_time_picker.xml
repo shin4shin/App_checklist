@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="초기화 시간 설정"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <!-- 시 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 시 직접 입력 -->
+            <EditText
+                android:id="@+id/etHour"
+                android:layout_width="52dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:textSize="22sp"
+                android:gravity="center"
+                android:maxLength="2"
+                android:hint="00"
+                android:background="@null"
+                android:padding="4dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="시  "
+                android:textSize="16sp"/>
+
+            <!-- 드롭다운 화살표 -->
+            <Spinner
+                android:id="@+id/spinnerHour"
+                android:layout_width="32dp"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown"/>
+        </LinearLayout>
+
+        <!-- 콜론 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" : "
+            android:textSize="22sp"
+            android:textStyle="bold"/>
+
+        <!-- 분 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 분 직접 입력 -->
+            <EditText
+                android:id="@+id/etMinute"
+                android:layout_width="52dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:textSize="22sp"
+                android:gravity="center"
+                android:maxLength="2"
+                android:hint="00"
+                android:background="@null"
+                android:padding="4dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="분  "
+                android:textSize="16sp"/>
+
+            <!-- 드롭다운 화살표 -->
+            <Spinner
+                android:id="@+id/spinnerMinute"
+                android:layout_width="32dp"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
