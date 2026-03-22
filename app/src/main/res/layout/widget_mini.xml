@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#CC1E1E1E"
+    android:padding="6dp">
+
+    <!-- 타이틀 + 페이지 버튼 (◀ 타이틀 ▶) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:id="@+id/btnMiniPrev"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:text="◀"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvMiniTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="데일리 체크"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnMiniNext"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:text="▶"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+    </LinearLayout>
+
+    <!-- 아이콘 그리드 (2x2) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- 왼쪽 열 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <FrameLayout android:id="@+id/miniCell1"
+                android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" android:gravity="center">
+                <ImageView android:id="@+id/miniIcon1"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"/>
+                <TextView android:id="@+id/miniCheck1"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:text="✓" android:textSize="28sp"
+                    android:textColor="#4CAF50" android:gravity="center"
+                    android:textStyle="bold" android:visibility="gone"/>
+            </FrameLayout>
+
+            <FrameLayout android:id="@+id/miniCell3"
+                android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" android:gravity="center">
+                <ImageView android:id="@+id/miniIcon3"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"/>
+                <TextView android:id="@+id/miniCheck3"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:text="✓" android:textSize="28sp"
+                    android:textColor="#4CAF50" android:gravity="center"
+                    android:textStyle="bold" android:visibility="gone"/>
+            </FrameLayout>
+
+        </LinearLayout>
+
+        <!-- 오른쪽 열 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <FrameLayout android:id="@+id/miniCell2"
+                android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" android:gravity="center">
+                <ImageView android:id="@+id/miniIcon2"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"/>
+                <TextView android:id="@+id/miniCheck2"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:text="✓" android:textSize="28sp"
+                    android:textColor="#4CAF50" android:gravity="center"
+                    android:textStyle="bold" android:visibility="gone"/>
+            </FrameLayout>
+
+            <FrameLayout android:id="@+id/miniCell4"
+                android:layout_width="match_parent" android:layout_height="0dp"
+                android:layout_weight="1" android:gravity="center">
+                <ImageView android:id="@+id/miniIcon4"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"/>
+                <TextView android:id="@+id/miniCheck4"
+                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:text="✓" android:textSize="28sp"
+                    android:textColor="#4CAF50" android:gravity="center"
+                    android:textStyle="bold" android:visibility="gone"/>
+            </FrameLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

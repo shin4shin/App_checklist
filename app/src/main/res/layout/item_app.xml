@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/item_app.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <!-- 완료 여부 체크 표시 -->
+    <TextView
+        android:id="@+id/tvCheck"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:text="✓"
+        android:textSize="20sp"
+        android:gravity="center"
+        android:visibility="invisible"/>
+
+    <!-- 앱 아이콘 -->
+    <ImageView
+        android:id="@+id/ivAppIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="4dp"
+        android:contentDescription="앱 아이콘"/>
+
+    <!-- 앱 이름 -->
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="16sp"
+        android:layout_marginStart="12dp"/>
+
+    <!-- 설정된 초기화 시간 -->
+    <TextView
+        android:id="@+id/tvResetTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="미설정"
+        android:textColor="#888888"
+        android:layout_marginEnd="8dp"/>
+
+    <!-- 시간 설정 버튼 -->
+    <Button
+        android:id="@+id/btnSetTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="설정"
+        style="@style/Widget.AppCompat.Button.Borderless"/>
+
+</LinearLayout>

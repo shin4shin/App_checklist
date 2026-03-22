@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="homework_done"
+        android:enabled="true"
+        android:icon="@drawable/ic_check"
+        android:shortcutShortLabel="@string/shortcut_short"
+        android:shortcutLongLabel="@string/shortcut_long">
+        <intent
+            android:action="com.example.homeworktracker.HOMEWORK_DONE"
+            android:targetPackage="com.example.homeworktracker"
+            android:targetClass="com.example.homeworktracker.MainActivity" />
+    </shortcut>
+</shortcuts>

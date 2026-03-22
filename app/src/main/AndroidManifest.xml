@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.homeworktracker">
+
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <application
+        android:allowBackup="true"
+        android:label="데일리 체크"
+        android:theme="@style/Theme.HomeworkTracker">
+
+        <activity android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <!-- 위젯 -->
+        <receiver android:name=".HomeworkWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.homeworktracker.TOGGLE_DONE" />
+                <action android:name="com.example.homeworktracker.NEXT_PAGE" />
+                <action android:name="com.example.homeworktracker.PREV_PAGE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/homework_widget_info" />
+        </receiver>
+
+        <!-- 2x2 미니 위젯 -->
+        <receiver android:name=".MiniWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.homeworktracker.MINI_TOGGLE_DONE" />
+                <action android:name="com.example.homeworktracker.MINI_NEXT_PAGE" />
+                <action android:name="com.example.homeworktracker.MINI_PREV_PAGE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mini_widget_info" />
+        </receiver>
+
+        <!-- 2x4 작은 위젯 -->
+        <receiver android:name=".SmallWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.homeworktracker.SMALL_TOGGLE_DONE" />
+                <action android:name="com.example.homeworktracker.SMALL_NEXT_PAGE" />
+                <action android:name="com.example.homeworktracker.SMALL_PREV_PAGE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/small_widget_info" />
+        </receiver>
+
+        <!-- 초기화 BroadcastReceiver -->
+        <receiver android:name=".ResetReceiver"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

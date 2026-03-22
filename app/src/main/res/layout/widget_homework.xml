@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="top"
+    android:background="#CC1E1E1E"
+    android:padding="12dp">
+
+    <!-- 타이틀 + 페이지 버튼 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvWidgetTitle"
+            android:layout_width="263dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="  데일리 체크"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvPageInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginEnd="8dp"/>
+
+        <TextView
+            android:id="@+id/btnPrevPage"
+            android:layout_width="32dp"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="◀"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/btnNextPage"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="▶"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp" />
+
+    </LinearLayout>
+
+    <!-- 앱 행 1 -->
+    <LinearLayout android:id="@+id/row1"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck1" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon1" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName1" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 2 -->
+    <LinearLayout android:id="@+id/row2"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck2" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon2" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName2" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 3 -->
+    <LinearLayout android:id="@+id/row3"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck3" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon3" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName3" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 4 -->
+    <LinearLayout android:id="@+id/row4"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck4" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon4" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName4" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 5 -->
+    <LinearLayout android:id="@+id/row5"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck5" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon5" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName5" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 6 -->
+    <LinearLayout android:id="@+id/row6"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck6" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon6" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName6" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 7 -->
+    <LinearLayout android:id="@+id/row7"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck7" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon7" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName7" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 8 -->
+    <LinearLayout android:id="@+id/row8"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck8" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon8" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName8" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- 앱 행 9 -->
+    <LinearLayout android:id="@+id/row9"
+        android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingVertical="2dp">
+        <TextView android:id="@+id/tvCheck9" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <ImageView android:id="@+id/ivIcon9" android:layout_width="28dp"
+            android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
+        <TextView android:id="@+id/tvAppName9" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:ellipsize="end" android:maxLines="1"
+            android:textColor="#FFFFFF" android:textSize="20sp" />
+    </LinearLayout>
+
+</LinearLayout>

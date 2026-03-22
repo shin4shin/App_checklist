@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">데일리 체크</string>
+    <string name="shortcut_short">숙제 완료</string>
+    <string name="shortcut_long">숙제 완료 표시하기</string>
+</resources>
