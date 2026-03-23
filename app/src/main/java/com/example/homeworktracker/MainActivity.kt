@@ -98,7 +98,8 @@ class MainActivity : AppCompatActivity() {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) add(Calendar.DATE, 1)
+            set(Calendar.MILLISECOND, 0)  // ← 추가
+            if (timeInMillis <= Calendar.getInstance().timeInMillis) add(Calendar.DATE, 1)
         }
         val intent = Intent(this, ResetReceiver::class.java).apply {
             putExtra("target_package", targetPackage)

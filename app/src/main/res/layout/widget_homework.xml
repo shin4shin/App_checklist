@@ -66,6 +66,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch1" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 2 -->
@@ -81,6 +84,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch2" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 3 -->
@@ -96,6 +102,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch3" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 4 -->
@@ -111,6 +120,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch4" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 5 -->
@@ -126,6 +138,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch5" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 6 -->
@@ -141,6 +156,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch6" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 7 -->
@@ -156,6 +174,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch7" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 8 -->
@@ -171,6 +192,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch8" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
     <!-- 앱 행 9 -->
@@ -186,6 +210,9 @@
             android:layout_height="wrap_content" android:layout_weight="1"
             android:ellipsize="end" android:maxLines="1"
             android:textColor="#FFFFFF" android:textSize="20sp" />
+        <TextView android:id="@+id/btnLaunch9" android:layout_width="32dp"
+            android:layout_height="match_parent" android:gravity="center"
+            android:text="›" android:textColor="#AAAAAA" android:textSize="28sp" />
     </LinearLayout>
 
 </LinearLayout>

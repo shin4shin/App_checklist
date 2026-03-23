@@ -88,21 +88,21 @@ class HomeworkWidget : AppWidgetProvider() {
                 PendingIntent.getBroadcast(context, appWidgetId * 10 + 2, prevIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
 
-            // 행 ID 목록
+            // 행 ID 목록 (rowId, checkId, iconId, nameId, launchBtnId)
             val rowIds = listOf(
-                listOf(R.id.row1, R.id.tvCheck1, R.id.ivIcon1, R.id.tvAppName1),
-                listOf(R.id.row2, R.id.tvCheck2, R.id.ivIcon2, R.id.tvAppName2),
-                listOf(R.id.row3, R.id.tvCheck3, R.id.ivIcon3, R.id.tvAppName3),
-                listOf(R.id.row4, R.id.tvCheck4, R.id.ivIcon4, R.id.tvAppName4),
-                listOf(R.id.row5, R.id.tvCheck5, R.id.ivIcon5, R.id.tvAppName5),
-                listOf(R.id.row6, R.id.tvCheck6, R.id.ivIcon6, R.id.tvAppName6),
-                listOf(R.id.row7, R.id.tvCheck7, R.id.ivIcon7, R.id.tvAppName7),
-                listOf(R.id.row8, R.id.tvCheck8, R.id.ivIcon8, R.id.tvAppName8),
-                listOf(R.id.row9, R.id.tvCheck9, R.id.ivIcon9, R.id.tvAppName9),
+                listOf(R.id.row1, R.id.tvCheck1, R.id.ivIcon1, R.id.tvAppName1, R.id.btnLaunch1),
+                listOf(R.id.row2, R.id.tvCheck2, R.id.ivIcon2, R.id.tvAppName2, R.id.btnLaunch2),
+                listOf(R.id.row3, R.id.tvCheck3, R.id.ivIcon3, R.id.tvAppName3, R.id.btnLaunch3),
+                listOf(R.id.row4, R.id.tvCheck4, R.id.ivIcon4, R.id.tvAppName4, R.id.btnLaunch4),
+                listOf(R.id.row5, R.id.tvCheck5, R.id.ivIcon5, R.id.tvAppName5, R.id.btnLaunch5),
+                listOf(R.id.row6, R.id.tvCheck6, R.id.ivIcon6, R.id.tvAppName6, R.id.btnLaunch6),
+                listOf(R.id.row7, R.id.tvCheck7, R.id.ivIcon7, R.id.tvAppName7, R.id.btnLaunch7),
+                listOf(R.id.row8, R.id.tvCheck8, R.id.ivIcon8, R.id.tvAppName8, R.id.btnLaunch8),
+                listOf(R.id.row9, R.id.tvCheck9, R.id.ivIcon9, R.id.tvAppName9, R.id.btnLaunch9),
             )
 
             rowIds.forEachIndexed { rowIndex, ids ->
-                val (rowId, checkId, iconId, nameId) = ids.map { it }
+                val (rowId, checkId, iconId, nameId, launchBtnId) = ids.map { it }
                 val appIndex = startIndex + rowIndex
 
                 if (appIndex < appInfos.size) {
@@ -123,7 +123,7 @@ class HomeworkWidget : AppWidgetProvider() {
 
                     try { views.setImageViewBitmap(iconId, drawableToBitmap(icon)) } catch (e: Exception) { }
 
-                    // 체크 토글
+                    // 체크 토글 (행 전체 + 체크 버튼)
                     val requestCode = appWidgetId * 100 + rowIndex
                     val toggleIntent = Intent(context, HomeworkWidget::class.java).apply {
                         action = ACTION_TOGGLE_DONE
@@ -136,6 +136,22 @@ class HomeworkWidget : AppWidgetProvider() {
                     )
                     views.setOnClickPendingIntent(rowId, togglePending)
                     views.setOnClickPendingIntent(checkId, togglePending)
+
+                    // 앱 실행 버튼 (오른쪽 끝 ›)
+                    val launchIntent = pm.getLaunchIntentForPackage(pkg)?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    if (launchIntent != null) {
+                        val launchRequestCode = appWidgetId * 100 + rowIndex + 1000
+                        val launchAppPending = PendingIntent.getActivity(
+                            context, launchRequestCode, launchIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        views.setOnClickPendingIntent(launchBtnId, launchAppPending)
+                        views.setViewVisibility(launchBtnId, android.view.View.VISIBLE)
+                    } else {
+                        views.setViewVisibility(launchBtnId, android.view.View.INVISIBLE)
+                    }
                 } else {
                     views.setViewVisibility(rowId, android.view.View.GONE)
                 }
