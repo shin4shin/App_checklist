@@ -1,6 +1,7 @@
 // HomeworkWidget.kt
 package com.example.homeworktracker
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -10,7 +11,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.widget.RemoteViews
+import java.util.Calendar
 
 class HomeworkWidget : AppWidgetProvider() {
 
@@ -28,7 +31,6 @@ class HomeworkWidget : AppWidgetProvider() {
         const val EXTRA_WIDGET_ID = "extra_widget_id"
         const val PAGE_SIZE = 9
 
-        // 위젯별 현재 페이지 저장
         private val pageMap = mutableMapOf<Int, Int>()
 
         fun updateAllWidgets(context: Context) {
@@ -40,7 +42,6 @@ class HomeworkWidget : AppWidgetProvider() {
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.widget_homework)
 
-            // 앱 목록 불러오기
             val prefs = context.getSharedPreferences("added_apps", Context.MODE_PRIVATE)
             val packages = prefs.getStringSet("apps", emptySet()) ?: emptySet()
             val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
@@ -53,16 +54,13 @@ class HomeworkWidget : AppWidgetProvider() {
                 } catch (e: Exception) { null }
             }.sortedBy { it.first }
 
-            // 페이지 계산
             val totalPages = if (appInfos.isEmpty()) 1 else (appInfos.size + PAGE_SIZE - 1) / PAGE_SIZE
             val currentPage = (pageMap[appWidgetId] ?: 0).coerceIn(0, totalPages - 1)
             pageMap[appWidgetId] = currentPage
             val startIndex = currentPage * PAGE_SIZE
 
-            // 페이지 정보 표시
             views.setTextViewText(R.id.tvPageInfo, "${currentPage + 1}/$totalPages")
 
-            // 타이틀 클릭 → 앱 실행
             val launchPending = PendingIntent.getActivity(
                 context, appWidgetId,
                 Intent(context, MainActivity::class.java),
@@ -70,7 +68,6 @@ class HomeworkWidget : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.tvWidgetTitle, launchPending)
 
-            // 다음 페이지 버튼
             val nextIntent = Intent(context, HomeworkWidget::class.java).apply {
                 action = ACTION_NEXT_PAGE
                 putExtra(EXTRA_WIDGET_ID, appWidgetId)
@@ -79,7 +76,6 @@ class HomeworkWidget : AppWidgetProvider() {
                 PendingIntent.getBroadcast(context, appWidgetId * 10 + 1, nextIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
 
-            // 이전 페이지 버튼
             val prevIntent = Intent(context, HomeworkWidget::class.java).apply {
                 action = ACTION_PREV_PAGE
                 putExtra(EXTRA_WIDGET_ID, appWidgetId)
@@ -88,7 +84,6 @@ class HomeworkWidget : AppWidgetProvider() {
                 PendingIntent.getBroadcast(context, appWidgetId * 10 + 2, prevIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
 
-            // 행 ID 목록 (rowId, checkId, iconId, nameId, launchBtnId)
             val rowIds = listOf(
                 listOf(R.id.row1, R.id.tvCheck1, R.id.ivIcon1, R.id.tvAppName1, R.id.btnLaunch1),
                 listOf(R.id.row2, R.id.tvCheck2, R.id.ivIcon2, R.id.tvAppName2, R.id.btnLaunch2),
@@ -123,7 +118,6 @@ class HomeworkWidget : AppWidgetProvider() {
 
                     try { views.setImageViewBitmap(iconId, drawableToBitmap(icon)) } catch (e: Exception) { }
 
-                    // 체크 토글 (행 전체 + 체크 버튼)
                     val requestCode = appWidgetId * 100 + rowIndex
                     val toggleIntent = Intent(context, HomeworkWidget::class.java).apply {
                         action = ACTION_TOGGLE_DONE
@@ -137,7 +131,7 @@ class HomeworkWidget : AppWidgetProvider() {
                     views.setOnClickPendingIntent(rowId, togglePending)
                     views.setOnClickPendingIntent(checkId, togglePending)
 
-                    // 앱 실행 버튼 (오른쪽 끝 ›)
+                    // 앱 실행 버튼
                     val launchIntent = pm.getLaunchIntentForPackage(pkg)?.apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
@@ -160,6 +154,54 @@ class HomeworkWidget : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
+        // ─── 알람 예약 (체크 ON일 때) ────────────────────────────────
+        fun scheduleResetIfNeeded(context: Context, pkg: String) {
+            val resetPrefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
+            val hour = resetPrefs.getInt("${pkg}_hour", -1)
+            val minute = resetPrefs.getInt("${pkg}_minute", 0)
+            if (hour < 0) return // 초기화 시간 미설정이면 패스
+
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= Calendar.getInstance().timeInMillis) {
+                    add(Calendar.DATE, 1)
+                }
+            }
+
+            val intent = Intent(context, ResetReceiver::class.java).apply {
+                putExtra("target_package", pkg)
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context, pkg.hashCode(), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+                } else {
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+            }
+        }
+
+        // ─── 알람 취소 (체크 OFF일 때) ───────────────────────────────
+        fun cancelReset(context: Context, pkg: String) {
+            val intent = Intent(context, ResetReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                context, pkg.hashCode(), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(pendingIntent)
+        }
+
         private fun drawableToBitmap(drawable: Drawable): Bitmap {
             val bitmap = Bitmap.createBitmap(
                 drawable.intrinsicWidth.takeIf { it > 0 } ?: 64,
@@ -180,7 +222,17 @@ class HomeworkWidget : AppWidgetProvider() {
             ACTION_TOGGLE_DONE -> {
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: return
                 val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-                donePrefs.edit().putBoolean(pkg, !donePrefs.getBoolean(pkg, false)).apply()
+                val nowDone = !donePrefs.getBoolean(pkg, false)
+                donePrefs.edit().putBoolean(pkg, nowDone).apply()
+
+                if (nowDone) {
+                    // 체크 ON → 다음 초기화 시간에 알람 예약
+                    scheduleResetIfNeeded(context, pkg)
+                } else {
+                    // 체크 OFF → 예약된 알람 취소
+                    cancelReset(context, pkg)
+                }
+
                 updateAllWidgets(context)
                 MiniWidget.updateAllWidgets(context)
                 SmallWidget.updateAllWidgets(context)
@@ -188,19 +240,15 @@ class HomeworkWidget : AppWidgetProvider() {
             ACTION_NEXT_PAGE -> {
                 val id = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
                 if (id != -1) {
-                    val current = pageMap[id] ?: 0
-                    pageMap[id] = current + 1
-                    val manager = AppWidgetManager.getInstance(context)
-                    updateWidget(context, manager, id)
+                    pageMap[id] = (pageMap[id] ?: 0) + 1
+                    updateWidget(context, AppWidgetManager.getInstance(context), id)
                 }
             }
             ACTION_PREV_PAGE -> {
                 val id = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
                 if (id != -1) {
-                    val current = pageMap[id] ?: 0
-                    pageMap[id] = maxOf(0, current - 1)
-                    val manager = AppWidgetManager.getInstance(context)
-                    updateWidget(context, manager, id)
+                    pageMap[id] = maxOf(0, (pageMap[id] ?: 0) - 1)
+                    updateWidget(context, AppWidgetManager.getInstance(context), id)
                 }
             }
         }

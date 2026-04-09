@@ -10,7 +10,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="데일리 체크"
+        android:label="Daily Check"
         android:theme="@style/Theme.HomeworkTracker">
 
         <activity android:name=".MainActivity"
@@ -23,6 +23,14 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- 부팅 후 알람 재등록 -->
+        <receiver android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- 위젯 -->
         <receiver android:name=".HomeworkWidget"

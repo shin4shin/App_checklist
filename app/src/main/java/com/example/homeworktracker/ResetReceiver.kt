@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import java.util.Calendar
+import androidx.core.content.edit
 
 class ResetReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -15,7 +16,7 @@ class ResetReceiver : BroadcastReceiver() {
 
         // 완료 상태 초기화
         context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-            .edit().putBoolean(targetPackage, false).apply()
+            .edit { putBoolean(targetPackage, false) }
 
         // 위젯 갱신
         HomeworkWidget.updateAllWidgets(context)
