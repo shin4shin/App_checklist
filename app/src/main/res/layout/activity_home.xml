@@ -9,7 +9,7 @@
         android:orientation="vertical"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingTop="40dp"
+        android:paddingTop="120dp"
         android:paddingBottom="16dp">
 
         <!-- Row 1: Daily, Weekly -->
