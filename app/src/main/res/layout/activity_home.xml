@@ -23,8 +23,7 @@
             <LinearLayout
                 android:id="@+id/cardDaily"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minHeight="150dp"
+                android:layout_height="150dp"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
@@ -54,8 +53,7 @@
             <LinearLayout
                 android:id="@+id/cardWeekly"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minHeight="150dp"
+                android:layout_height="150dp"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
@@ -94,8 +92,7 @@
             <LinearLayout
                 android:id="@+id/cardMonthly"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minHeight="150dp"
+                android:layout_height="150dp"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
@@ -125,8 +122,7 @@
             <LinearLayout
                 android:id="@+id/cardEvent"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minHeight="150dp"
+                android:layout_height="150dp"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
@@ -169,8 +165,7 @@
             <LinearLayout
                 android:id="@+id/cardPremium"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minHeight="150dp"
+                android:layout_height="150dp"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
