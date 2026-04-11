@@ -37,12 +37,27 @@ class HomeworkListFactory(
         val packages = prefs.getStringSet("apps", emptySet()) ?: emptySet()
         val pm = context.packageManager
 
+        val sortMode = context.getSharedPreferences("sort_prefs", Context.MODE_PRIVATE)
+            .getInt("sort_mode", 0)
+        val resetPrefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
+
         packages.mapNotNull { pkg ->
             try {
                 val info = pm.getApplicationInfo(pkg, 0)
                 Triple(pm.getApplicationLabel(info).toString(), pkg, pm.getApplicationIcon(info))
             } catch (e: Exception) { null }
-        }.sortedBy { it.first }.also { appInfos.addAll(it) }
+        }.let { list ->
+            if (sortMode == 0) list.sortedBy { it.first }
+            else list.sortedWith(Comparator { a, b ->
+                val ah = resetPrefs.getInt("${a.second}_hour", -1)
+                val am = resetPrefs.getInt("${a.second}_minute", 0)
+                val bh = resetPrefs.getInt("${b.second}_hour", -1)
+                val bm = resetPrefs.getInt("${b.second}_minute", 0)
+                val aMin = if (ah >= 0) ah * 60 + am else Int.MAX_VALUE
+                val bMin = if (bh >= 0) bh * 60 + bm else Int.MAX_VALUE
+                aMin - bMin
+            })
+        }.also { appInfos.addAll(it) }
     }
 
     override fun getCount() = appInfos.size

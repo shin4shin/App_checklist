@@ -31,7 +31,8 @@ class AppAdapter(
     val selectedPackages = mutableSetOf<String>()
 
     // 정렬
-    var sortMode = SORT_NAME
+    var sortMode = context.getSharedPreferences("sort_prefs", Context.MODE_PRIVATE)
+        .getInt("sort_mode", SORT_NAME)
         private set
 
     inner class AppViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -127,6 +128,8 @@ class AppAdapter(
     // ─── 정렬 ────────────────────────────────────────────────────────
     fun setSortMode(mode: Int) {
         sortMode = mode
+        context.getSharedPreferences("sort_prefs", Context.MODE_PRIVATE)
+            .edit().putInt("sort_mode", mode).apply()
         applySortMode()
         notifyDataSetChanged()
     }
