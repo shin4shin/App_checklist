@@ -245,6 +245,9 @@ class MainActivity : AppCompatActivity() {
             .setTitle("정렬")
             .setSingleChoiceItems(options, adapter.sortMode) { dialog, which ->
                 adapter.setSortMode(which)
+                HomeworkWidget.updateAllWidgets(this)
+                MiniWidget.updateAllWidgets(this)
+                SmallWidget.updateAllWidgets(this)
                 dialog.dismiss()
             }
             .show()
@@ -372,6 +375,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshAppList() {
-        appList.clear(); appList.addAll(getAddedAppList()); adapter.notifyDataSetChanged()
+        appList.clear()
+        appList.addAll(getAddedAppList())
+        adapter.refreshSort()
+        adapter.notifyDataSetChanged()
     }
 }
