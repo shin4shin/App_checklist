@@ -4,7 +4,6 @@ import android.accessibilityservice.AccessibilityService
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -152,21 +151,23 @@ class GameOverlayService : AccessibilityService() {
             val headerRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding((10 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt(), (2 * dp).toInt())
+                setBackgroundColor(Color.argb(55, Color.red(color), Color.green(color), Color.blue(color)))
             }
-            val indicator = View(this).apply {
-                background = ColorDrawable(color)
+            val accentBar = View(this).apply {
+                setBackgroundColor(color)
                 layoutParams = LinearLayout.LayoutParams(
-                    (8 * dp).toInt(), (8 * dp).toInt()
-                ).apply { setMargins(0, 0, (6 * dp).toInt(), 0) }
+                    (4 * dp).toInt(), (28 * dp).toInt()
+                )
             }
             val tvCategory = TextView(this).apply {
                 text = displayName
-                textSize = 12f
-                setTextColor(Color.WHITE)
+                textSize = 11f
+                setTextColor(color)
                 typeface = Typeface.DEFAULT_BOLD
+                letterSpacing = 0.06f
+                setPadding((10 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt(), (6 * dp).toInt())
             }
-            headerRow.addView(indicator)
+            headerRow.addView(accentBar)
             headerRow.addView(tvCategory)
             container.addView(headerRow)
 
@@ -229,12 +230,12 @@ class GameOverlayService : AccessibilityService() {
         }
 
         val tab = TextView(this).apply {
-            text = "»"
-            textSize = 18f
-            setTextColor(Color.parseColor("#CCCCCC"))
+            text = "▶"
+            textSize = 16f
+            setTextColor(Color.parseColor("#7EA8FF"))
             gravity = Gravity.CENTER
             val dp = resources.displayMetrics.density
-            setPadding((8 * dp).toInt(), (20 * dp).toInt(), (12 * dp).toInt(), (20 * dp).toInt())
+            setPadding((8 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt())
             background = ContextCompat.getDrawable(this@GameOverlayService, R.drawable.bg_overlay_tab)
             alpha = currentAlpha
         }
@@ -407,7 +408,7 @@ class GameOverlayService : AccessibilityService() {
 
     private fun applyCheckStyle(tvCheck: TextView, isDone: Boolean) {
         tvCheck.text = if (isDone) "✓" else "○"
-        tvCheck.setTextColor(if (isDone) Color.parseColor("#4CAF50") else Color.parseColor("#888888"))
+        tvCheck.setTextColor(if (isDone) Color.parseColor("#66D96E") else Color.parseColor("#666688"))
     }
 
     override fun onInterrupt() { hideAll() }
