@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
@@ -82,6 +83,20 @@
         <!-- 초기화 BroadcastReceiver -->
         <receiver android:name=".ResetReceiver"
             android:exported="false" />
+
+        <!-- 게임 오버레이 AccessibilityService -->
+        <service
+            android:name=".GameOverlayService"
+            android:exported="true"
+            android:label="데일리 체크 오버레이"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
 
     </application>
 

@@ -10,13 +10,19 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -24,6 +30,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Calendar
 
 data class AppInfo(
@@ -228,10 +236,12 @@ class MainActivity : AppCompatActivity() {
             val popup = PopupMenu(this, anchor)
             popup.menu.add(0, 1, 0, "정렬")
             popup.menu.add(0, 2, 1, "선택")
+            popup.menu.add(0, 3, 2, "오버레이 설정")
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> showSortDialog()
                     2 -> adapter.enterSelectionMode()
+                    3 -> showOverlaySetupDialog()
                 }
                 true
             }
@@ -298,7 +308,8 @@ class MainActivity : AppCompatActivity() {
                 btnSave.visibility = if (isSelecting) View.GONE else View.VISIBLE
                 findViewById<FloatingActionButton>(R.id.fabAddApp)
                     .visibility = if (isSelecting) View.GONE else View.VISIBLE
-            }
+            },
+            onTaskClick = { app -> showTaskDialog(app) }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -345,6 +356,10 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("added_apps", Context.MODE_PRIVATE)
         val set = prefs.getStringSet("apps", mutableSetOf())!!.toMutableSet()
         set.add(pkg); prefs.edit().putStringSet("apps", set).apply()
+        // 처음 추가하는 앱에만 기본 데일리 태스크 설정
+        if (getSharedPreferences("app_tasks", MODE_PRIVATE).getString(pkg, null) == null) {
+            saveTasksByCategory(pkg, mutableMapOf("Daily" to mutableListOf("일일 퀘스트")))
+        }
     }
 
     private fun deleteAddedApp(pkg: String) {
@@ -379,5 +394,143 @@ class MainActivity : AppCompatActivity() {
         appList.addAll(getAddedAppList())
         adapter.refreshSort()
         adapter.notifyDataSetChanged()
+    }
+
+    // ─── 태스크 다이얼로그 ────────────────────────────────────────────
+    private fun showTaskDialog(app: AppInfo) {
+        val categoryKeys  = listOf("Daily", "Weekly", "Monthly", "Event")
+        val categoryNames = listOf("데일리 (Daily)", "위클리 (Weekly)", "먼슬리 (Monthly)", "이벤트 (Event)")
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_task_list, null)
+        val spinner  = dialogView.findViewById<Spinner>(R.id.spinnerCategory)
+        val etNewTask = dialogView.findViewById<EditText>(R.id.etNewTask)
+        val btnAdd   = dialogView.findViewById<Button>(R.id.btnAddTask)
+        val rvTasks  = dialogView.findViewById<RecyclerView>(R.id.rvTasks)
+
+        val allTasks = loadTasksByCategory(app.packageName)
+        val taskMap  = categoryKeys.associateWith { cat ->
+            (allTasks[cat] ?: emptyList()).toMutableList()
+        }.toMutableMap()
+
+        var currentCategory = categoryKeys[0]
+        var currentTasks    = taskMap[currentCategory]!!
+
+        val taskAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            override fun getItemCount() = currentTasks.size
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+                object : RecyclerView.ViewHolder(layoutInflater.inflate(R.layout.item_task_edit, parent, false)) {}
+            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                holder.itemView.findViewById<TextView>(R.id.tvTaskItem).text = currentTasks[position]
+                holder.itemView.findViewById<TextView>(R.id.btnDeleteTask).setOnClickListener {
+                    val pos = holder.adapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        currentTasks.removeAt(pos)
+                        notifyItemRemoved(pos)
+                    }
+                }
+            }
+        }
+
+        rvTasks.layoutManager = LinearLayoutManager(this)
+        rvTasks.adapter = taskAdapter
+
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categoryNames)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = spinnerAdapter
+        spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: android.widget.AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
+                currentCategory = categoryKeys[pos]
+                currentTasks = taskMap[currentCategory]!!
+                taskAdapter.notifyDataSetChanged()
+            }
+            override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
+        }
+
+        btnAdd.setOnClickListener {
+            val text = etNewTask.text.toString().trim()
+            if (text.isNotEmpty()) {
+                currentTasks.add(text)
+                taskAdapter.notifyItemInserted(currentTasks.size - 1)
+                etNewTask.text.clear()
+            }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("${app.name} - 할 일 목록")
+            .setView(dialogView)
+            .setPositiveButton("저장") { _, _ -> saveTasksByCategory(app.packageName, taskMap) }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
+    private fun loadTasksByCategory(pkg: String): Map<String, List<String>> {
+        val json = getSharedPreferences("app_tasks", MODE_PRIVATE).getString(pkg, "{}") ?: "{}"
+        return try {
+            if (json.trim().startsWith("[")) {
+                val arr = JSONArray(json)
+                val list = (0 until arr.length()).map { arr.getString(it) }
+                if (list.isEmpty()) emptyMap() else mapOf("Daily" to list)
+            } else {
+                val obj = JSONObject(json)
+                val result = mutableMapOf<String, List<String>>()
+                for (key in obj.keys()) {
+                    val arr = obj.getJSONArray(key)
+                    result[key] = (0 until arr.length()).map { arr.getString(it) }
+                }
+                result
+            }
+        } catch (e: Exception) { emptyMap() }
+    }
+
+    private fun saveTasksByCategory(pkg: String, taskMap: Map<String, MutableList<String>>) {
+        val obj = JSONObject()
+        for ((category, tasks) in taskMap) {
+            if (tasks.isNotEmpty()) obj.put(category, JSONArray(tasks))
+        }
+        getSharedPreferences("app_tasks", MODE_PRIVATE)
+            .edit().putString(pkg, obj.toString()).apply()
+    }
+
+    // ─── 오버레이 설정 안내 ────────────────────────────────────────────
+    private fun showOverlaySetupDialog() {
+        val overlayOk = Settings.canDrawOverlays(this)
+        val accessibilityOk = isAccessibilityEnabled()
+
+        if (overlayOk && accessibilityOk) {
+            Toast.makeText(this, "오버레이 설정이 완료되어 있습니다", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val msg = buildString {
+            if (!overlayOk) appendLine("• [다른 앱 위에 표시] 권한이 필요합니다.")
+            if (!accessibilityOk) appendLine("• [접근성] 서비스 활성화가 필요합니다.")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("오버레이 설정")
+            .setMessage(msg.trim())
+            .apply {
+                if (!overlayOk) setPositiveButton("다른 앱 위에 표시 설정") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:$packageName")))
+                }
+                if (!accessibilityOk) setNeutralButton("접근성 서비스 설정") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+            }
+            .setNegativeButton("취소", null)
+            .show()
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val service = "$packageName/${GameOverlayService::class.java.canonicalName}"
+        return try {
+            val enabled = Settings.Secure.getInt(contentResolver,
+                Settings.Secure.ACCESSIBILITY_ENABLED, 0)
+            if (enabled == 0) return false
+            val services = Settings.Secure.getString(contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+            services.split(":").any { it.equals(service, ignoreCase = true) }
+        } catch (e: Exception) { false }
     }
 }

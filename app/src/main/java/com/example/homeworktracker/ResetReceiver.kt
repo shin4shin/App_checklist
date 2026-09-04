@@ -9,14 +9,35 @@ import android.content.Intent
 import android.os.Build
 import java.util.Calendar
 import androidx.core.content.edit
+import org.json.JSONArray
+import org.json.JSONObject
 
 class ResetReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val targetPackage = intent.getStringExtra("target_package") ?: return
 
-        // 완료 상태 초기화
-        context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-            .edit { putBoolean(targetPackage, false) }
+        // 완료 상태 초기화 (앱 + 태스크)
+        val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
+        donePrefs.edit { putBoolean(targetPackage, false) }
+        try {
+            val json = context.getSharedPreferences("app_tasks", Context.MODE_PRIVATE)
+                .getString(targetPackage, "{}") ?: "{}"
+            donePrefs.edit {
+                if (json.trim().startsWith("[")) {
+                    // 구버전 flat 배열 형식
+                    val arr = JSONArray(json)
+                    for (i in 0 until arr.length()) remove("${targetPackage}_Daily_$i")
+                } else {
+                    val obj = JSONObject(json)
+                    for (cat in listOf("Daily", "Weekly", "Monthly", "Event")) {
+                        if (obj.has(cat)) {
+                            val arr = obj.getJSONArray(cat)
+                            for (i in 0 until arr.length()) remove("${targetPackage}_${cat}_$i")
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) { }
 
         // 위젯 갱신
         HomeworkWidget.updateAllWidgets(context)

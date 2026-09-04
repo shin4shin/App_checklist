@@ -117,8 +117,17 @@ class SmallWidget : AppWidgetProvider() {
                     val togglePending = PendingIntent.getBroadcast(
                         context, appWidgetId * 100 + rowIndex, toggleIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                    views.setOnClickPendingIntent(rowId, togglePending)
                     views.setOnClickPendingIntent(checkId, togglePending)
+
+                    val launchIntent = pm.getLaunchIntentForPackage(pkg)?.apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    if (launchIntent != null) {
+                        val launchPending = PendingIntent.getActivity(
+                            context, appWidgetId * 100 + rowIndex + 1000, launchIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                        views.setOnClickPendingIntent(rowId, launchPending)
+                    }
                 } else {
                     views.setViewVisibility(rowId, android.view.View.GONE)
                 }

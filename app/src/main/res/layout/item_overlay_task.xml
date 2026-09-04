@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="38dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="6dp"
+    android:paddingEnd="8dp">
+
+    <TextView
+        android:id="@+id/tvTaskCheck"
+        android:layout_width="28dp"
+        android:layout_height="wrap_content"
+        android:text="○"
+        android:textSize="16sp"
+        android:textColor="#888888"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/tvTaskName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="#DDDDDD"
+        android:textSize="13sp"
+        android:ellipsize="end"
+        android:maxLines="1" />
+
+</LinearLayout>

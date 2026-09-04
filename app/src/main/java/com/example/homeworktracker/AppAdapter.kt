@@ -15,7 +15,8 @@ class AppAdapter(
     private val appList: MutableList<AppInfo>,
     private val onRemove: (AppInfo) -> Unit,
     private val onSave: () -> Unit,
-    private val onSelectionChanged: (Boolean) -> Unit  // 선택 모드 on/off 콜백
+    private val onSelectionChanged: (Boolean) -> Unit,
+    private val onTaskClick: (AppInfo) -> Unit = {}
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -105,7 +106,7 @@ class AppAdapter(
             )
 
             holder.btnSet.setOnClickListener { showTimePicker(app.packageName, holder.tvResetTime) }
-            holder.itemView.setOnClickListener(null)
+            holder.itemView.setOnClickListener { onTaskClick(app) }
             holder.itemView.setOnLongClickListener { onRemove(app); true }
         }
     }

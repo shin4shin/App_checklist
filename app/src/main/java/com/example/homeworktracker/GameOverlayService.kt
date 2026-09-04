@@ -1,0 +1,421 @@
+package com.example.homeworktracker
+
+import android.accessibilityservice.AccessibilityService
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
+import android.os.Build
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
+import android.view.animation.DecelerateInterpolator
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlin.math.abs
+
+class GameOverlayService : AccessibilityService() {
+
+    private var overlayView: View? = null
+    private var tabView: View? = null
+    private var revealOverlayView: View? = null
+    private var revealParams: WindowManager.LayoutParams? = null
+    private var windowManager: WindowManager? = null
+    private var currentPkg: String? = null
+    private var savedY = -1
+    private var isMinimized = false
+    private var currentAlpha = 0.9f
+
+    private val overlayWidthPx get() = (220 * resources.displayMetrics.density).toInt()
+
+    private data class Category(val key: String, val displayName: String, val color: Int)
+    private val categories = listOf(
+        Category("Daily",   "데일리",  Color.parseColor("#5B8DEF")),
+        Category("Weekly",  "위클리",  Color.parseColor("#6DB56D")),
+        Category("Monthly", "먼슬리",  Color.parseColor("#C878C8")),
+        Category("Event",   "이벤트",  Color.parseColor("#E8924A"))
+    )
+
+    override fun onCreate() {
+        super.onCreate()
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        savedY = resources.displayMetrics.heightPixels / 3
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val pkg = event.packageName?.toString() ?: return
+        if (pkg == packageName) return
+
+        val registeredApps = getSharedPreferences("added_apps", MODE_PRIVATE)
+            .getStringSet("apps", emptySet()) ?: emptySet()
+
+        if (pkg in registeredApps) {
+            if (pkg != currentPkg) {
+                isMinimized = false
+                currentPkg = pkg
+                showOverlay(pkg)
+            } else if (overlayView == null && tabView == null) {
+                if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
+            }
+        } else {
+            // 알림 패널·빠른 설정 등 항상 떠있는 시스템 UI는 무시
+            if (currentPkg != null && !isSystemUiPackage(pkg)) {
+                hideAll()
+            }
+        }
+    }
+
+    // ─── 오버레이 표시 ──────────────────────────────────────────────────
+    private fun showOverlay(pkg: String) {
+        hideAll()
+        val view = buildOverlayView(pkg) ?: return
+
+        val topMargin = (resources.displayMetrics.heightPixels * 0.08f).toInt()
+        val params = makeOverlayParams().apply {
+            flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            gravity = Gravity.LEFT or Gravity.TOP
+            x = 0
+            y = topMargin
+        }
+
+        view.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                isMinimized = true
+                minimizeToTab(pkg)
+                true
+            } else false
+        }
+
+        windowManager?.addView(view, params)
+        overlayView = view
+    }
+
+    // ─── 오버레이 뷰 생성 (WindowManager 미등록) ────────────────────────
+    private fun buildOverlayView(pkg: String): View? {
+        val tasksByCategory = loadTasksByCategory(pkg)
+        if (tasksByCategory.none { (_, tasks) -> tasks.isNotEmpty() }) return null
+
+        val inflater = LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.overlay_game_tasks, null)
+
+        val tvTitle = view.findViewById<TextView>(R.id.tvOverlayTitle)
+        try {
+            val info = packageManager.getApplicationInfo(pkg, 0)
+            tvTitle.text = packageManager.getApplicationLabel(info)
+        } catch (e: Exception) {
+            tvTitle.text = pkg
+        }
+
+        val container = view.findViewById<LinearLayout>(R.id.taskContainer)
+        val dp = resources.displayMetrics.density
+        var firstSection = true
+
+        for ((categoryKey, displayName, color) in categories) {
+            val tasks = tasksByCategory[categoryKey]
+            if (tasks.isNullOrEmpty()) continue
+
+            if (!firstSection) {
+                val divider = View(this).apply { setBackgroundColor(Color.parseColor("#33FFFFFF")) }
+                val divParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 1
+                ).apply { setMargins(0, (4 * dp).toInt(), 0, (4 * dp).toInt()) }
+                container.addView(divider, divParams)
+            }
+            firstSection = false
+
+            val headerRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding((10 * dp).toInt(), (6 * dp).toInt(), (8 * dp).toInt(), (2 * dp).toInt())
+            }
+            val indicator = View(this).apply {
+                background = ColorDrawable(color)
+                layoutParams = LinearLayout.LayoutParams(
+                    (8 * dp).toInt(), (8 * dp).toInt()
+                ).apply { setMargins(0, 0, (6 * dp).toInt(), 0) }
+            }
+            val tvCategory = TextView(this).apply {
+                text = displayName
+                textSize = 11f
+                setTextColor(Color.WHITE)
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            headerRow.addView(indicator)
+            headerRow.addView(tvCategory)
+            container.addView(headerRow)
+
+            tasks.forEachIndexed { index, taskName ->
+                val row = inflater.inflate(R.layout.item_overlay_task, container, false)
+                val tvCheck = row.findViewById<TextView>(R.id.tvTaskCheck)
+                val tvName  = row.findViewById<TextView>(R.id.tvTaskName)
+                tvName.text = taskName
+                applyCheckStyle(tvCheck, isTaskDone(pkg, categoryKey, index))
+                row.setOnClickListener {
+                    val nowDone = !isTaskDone(pkg, categoryKey, index)
+                    setTaskDone(pkg, categoryKey, index, nowDone)
+                    applyCheckStyle(tvCheck, nowDone)
+                }
+                container.addView(row)
+            }
+        }
+
+        val savedAlphaInt = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            .getInt("overlay_alpha", 90)
+        currentAlpha = savedAlphaInt / 100f
+        view.alpha = currentAlpha
+
+        view.findViewById<SeekBar>(R.id.seekbarAlpha).apply {
+            progress = savedAlphaInt
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, value: Int, fromUser: Boolean) {
+                    currentAlpha = value.coerceAtLeast(20) / 100f
+                    view.alpha = currentAlpha
+                    tabView?.alpha = currentAlpha
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {
+                    getSharedPreferences("app_prefs", MODE_PRIVATE)
+                        .edit().putInt("overlay_alpha", (currentAlpha * 100).toInt()).apply()
+                }
+            })
+        }
+
+        view.findViewById<TextView>(R.id.btnMinimizeOverlay).setOnClickListener {
+            isMinimized = true
+            minimizeToTab(pkg)
+        }
+
+        return view
+    }
+
+    // ─── 탭으로 접기 ────────────────────────────────────────────────────
+    private fun minimizeToTab(pkg: String) {
+        overlayView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            overlayView = null
+        }
+
+        val tab = TextView(this).apply {
+            text = "»"
+            textSize = 18f
+            setTextColor(Color.parseColor("#CCCCCC"))
+            gravity = Gravity.CENTER
+            val dp = resources.displayMetrics.density
+            setPadding((8 * dp).toInt(), (20 * dp).toInt(), (12 * dp).toInt(), (20 * dp).toInt())
+            background = ContextCompat.getDrawable(this@GameOverlayService, R.drawable.bg_overlay_tab)
+            alpha = currentAlpha
+        }
+
+        val tabParams = makeOverlayParams().apply {
+            width  = WindowManager.LayoutParams.WRAP_CONTENT
+            height = WindowManager.LayoutParams.WRAP_CONTENT
+            gravity = Gravity.LEFT or Gravity.TOP
+            flags = flags or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+            x = 0
+            y = savedY
+        }
+
+        var touchStartX = 0f
+        var touchStartY = 0f
+        var initTabY  = 0
+        var dragDir   = 0    // 0=미결정, 1=세로, 2=가로(오버레이 당김)
+        var hasDragged = false
+
+        tab.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    touchStartX = event.rawX
+                    touchStartY = event.rawY
+                    initTabY   = tabParams.y
+                    dragDir    = 0
+                    hasDragged = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - touchStartX
+                    val dy = event.rawY - touchStartY
+                    if (dragDir == 0) {
+                        val adx = abs(dx)
+                        val ady = abs(dy)
+                        val minH = 24 * resources.displayMetrics.density  // 수평 최소 이동거리
+                        when {
+                            adx > ady * 2.5f && adx > minH -> {  // 확실한 수평 드래그
+                                hasDragged = true
+                                dragDir = 2
+                                prepareRevealOverlay(pkg)
+                                completeReveal(pkg, tab, tabParams)
+                            }
+                            ady > adx -> {  // 세로 성분이 조금이라도 크면 수직으로 확정
+                                hasDragged = ady > 8
+                                if (hasDragged) dragDir = 1
+                            }
+                        }
+                    }
+                    if (dragDir == 1) {  // 세로 드래그 → 탭 위치 조정
+                        tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
+                        savedY = tabParams.y
+                        windowManager?.updateViewLayout(tab, tabParams)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    // dragDir==2는 MOVE에서 이미 completeReveal 호출됨
+                    if (!hasDragged) expandFromTab(pkg)
+                    true
+                }
+                else -> false
+            }
+        }
+
+        windowManager?.addView(tab, tabParams)
+        tabView = tab
+    }
+
+    // ─── 드래그 중 오버레이 미리 생성 (translationX로 화면 밖에 숨김) ──
+    private fun prepareRevealOverlay(pkg: String) {
+        val view = buildOverlayView(pkg) ?: return
+        val params = makeOverlayParams().apply {
+            flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            gravity = Gravity.LEFT or Gravity.TOP
+            x = 0
+            y = (resources.displayMetrics.heightPixels * 0.08f).toInt()
+        }
+        view.translationX = -overlayWidthPx.toFloat()  // 화면 왼쪽 밖으로 숨김
+        windowManager?.addView(view, params)
+        revealOverlayView = view
+        revealParams = params
+    }
+
+    // ─── 슬라이드인: translationX 0까지, 탭은 오른쪽으로 밀려 사라짐 ──
+    private fun completeReveal(pkg: String, tab: View, tabParams: WindowManager.LayoutParams) {
+        val overlay = revealOverlayView ?: return
+
+        // 오버레이: translationX -overlayWidthPx → 0
+        overlay.animate()
+            .translationX(0f)
+            .setDuration(220)
+            .setInterpolator(DecelerateInterpolator())
+            .withEndAction {
+                isMinimized = false
+                overlayView = revealOverlayView
+                revealOverlayView = null
+                revealParams = null
+                overlayView?.setOnTouchListener { _, event ->
+                    if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                        isMinimized = true
+                        minimizeToTab(pkg)
+                        true
+                    } else false
+                }
+                try { windowManager?.removeView(tab) } catch (e: Exception) {}
+                if (tab === tabView) tabView = null
+            }
+            .start()
+
+        // 탭: 페이드 아웃 (제거는 overlay withEndAction에서 처리)
+        tab.animate()
+            .alpha(0f)
+            .setDuration(180)
+            .start()
+    }
+
+    // ─── 탭 탭(단순 클릭) → 오버레이 펼치기 ──────────────────────────
+    private fun expandFromTab(pkg: String) {
+        isMinimized = false
+        tabView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            tabView = null
+        }
+        showOverlay(pkg)
+    }
+
+    private fun hideAll() {
+        overlayView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            overlayView = null
+        }
+        tabView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            tabView = null
+        }
+        revealOverlayView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            revealOverlayView = null
+        }
+        revealParams = null
+    }
+
+    private fun makeOverlayParams() = WindowManager.LayoutParams(
+        WindowManager.LayoutParams.WRAP_CONTENT,
+        WindowManager.LayoutParams.WRAP_CONTENT,
+        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+        PixelFormat.TRANSLUCENT
+    )
+
+    private fun applyCheckStyle(tvCheck: TextView, isDone: Boolean) {
+        tvCheck.text = if (isDone) "✓" else "○"
+        tvCheck.setTextColor(if (isDone) Color.parseColor("#4CAF50") else Color.parseColor("#888888"))
+    }
+
+    override fun onInterrupt() { hideAll() }
+
+    // 사용자가 직접 실행할 수 없는 시스템 컴포넌트(상태바·IME·systemui 등)는 무시
+    // 설정·런처처럼 실제로 열 수 있는 시스템 앱은 정상 전환으로 처리
+    private fun isSystemUiPackage(pkg: String): Boolean {
+        if (pkg == "android" || pkg.contains("systemui", ignoreCase = true)) return true
+        return try {
+            val info = packageManager.getApplicationInfo(pkg, 0)
+            val isSystem = (info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            isSystem && packageManager.getLaunchIntentForPackage(pkg) == null
+        } catch (e: Exception) { false }
+    }
+
+    override fun onDestroy() {
+        hideAll()
+        super.onDestroy()
+    }
+
+    private fun loadTasksByCategory(pkg: String): Map<String, List<String>> {
+        val json = getSharedPreferences("app_tasks", MODE_PRIVATE).getString(pkg, "{}") ?: "{}"
+        return try {
+            if (json.trim().startsWith("[")) {
+                val arr = JSONArray(json)
+                val list = (0 until arr.length()).map { arr.getString(it) }
+                if (list.isEmpty()) emptyMap() else mapOf("Daily" to list)
+            } else {
+                val obj = JSONObject(json)
+                val result = mutableMapOf<String, List<String>>()
+                for (key in obj.keys()) {
+                    val arr = obj.getJSONArray(key)
+                    result[key] = (0 until arr.length()).map { arr.getString(it) }
+                }
+                result
+            }
+        } catch (e: Exception) { emptyMap() }
+    }
+
+    private fun isTaskDone(pkg: String, category: String, index: Int) =
+        getSharedPreferences("done_status", MODE_PRIVATE)
+            .getBoolean("${pkg}_${category}_$index", false)
+
+    private fun setTaskDone(pkg: String, category: String, index: Int, done: Boolean) {
+        getSharedPreferences("done_status", MODE_PRIVATE)
+            .edit().putBoolean("${pkg}_${category}_$index", done).apply()
+    }
+}

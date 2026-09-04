@@ -143,7 +143,6 @@ class HomeworkWidget : AppWidgetProvider() {
                         context, requestCode, toggleIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    views.setOnClickPendingIntent(rowId, togglePending)
                     views.setOnClickPendingIntent(checkId, togglePending)
 
                     // 앱 실행 버튼
@@ -156,6 +155,7 @@ class HomeworkWidget : AppWidgetProvider() {
                             context, launchRequestCode, launchIntent,
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                         )
+                        views.setOnClickPendingIntent(rowId, launchAppPending)
                         views.setOnClickPendingIntent(launchBtnId, launchAppPending)
                         views.setViewVisibility(launchBtnId, android.view.View.VISIBLE)
                     } else {
