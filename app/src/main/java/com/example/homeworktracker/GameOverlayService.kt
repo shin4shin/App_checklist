@@ -6,6 +6,8 @@ import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -33,6 +35,9 @@ class GameOverlayService : AccessibilityService() {
     private var isMinimized = false
     private var currentAlpha = 0.9f
 
+    private val handler = Handler(Looper.getMainLooper())
+    private var pendingHideRunnable: Runnable? = null
+
     private val overlayWidthPx get() = (220 * resources.displayMetrics.density).toInt()
 
     private data class Category(val key: String, val displayName: String, val color: Int)
@@ -58,6 +63,8 @@ class GameOverlayService : AccessibilityService() {
             .getStringSet("apps", emptySet()) ?: emptySet()
 
         if (pkg in registeredApps) {
+            // 등록된 앱이 포그라운드 → 예약된 hideAll 취소
+            cancelPendingHide()
             if (pkg != currentPkg) {
                 isMinimized = false
                 currentPkg = pkg
@@ -66,9 +73,9 @@ class GameOverlayService : AccessibilityService() {
                 if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
             }
         } else {
-            // 알림 패널·빠른 설정 등 항상 떠있는 시스템 UI는 무시
+            // 시스템 UI는 무시, 그 외는 500ms 뒤 hideAll (게임 내 SDK·다이얼로그 오판 방지)
             if (currentPkg != null && !isSystemUiPackage(pkg)) {
-                hideAll()
+                schedulePendingHide()
             }
         }
     }
@@ -361,6 +368,18 @@ class GameOverlayService : AccessibilityService() {
         showOverlay(pkg)
     }
 
+    private fun schedulePendingHide() {
+        cancelPendingHide()
+        pendingHideRunnable = Runnable { hideAll() }.also {
+            handler.postDelayed(it, 500)
+        }
+    }
+
+    private fun cancelPendingHide() {
+        pendingHideRunnable?.let { handler.removeCallbacks(it) }
+        pendingHideRunnable = null
+    }
+
     private fun hideAll() {
         overlayView?.let {
             try { windowManager?.removeView(it) } catch (e: Exception) { }
@@ -405,6 +424,7 @@ class GameOverlayService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        cancelPendingHide()
         hideAll()
         super.onDestroy()
     }
