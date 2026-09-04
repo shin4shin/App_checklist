@@ -181,6 +181,7 @@ class GameOverlayService : AccessibilityService() {
                     val nowDone = !isTaskDone(pkg, categoryKey, index)
                     setTaskDone(pkg, categoryKey, index, nowDone)
                     applyCheckStyle(tvCheck, nowDone)
+                    if (categoryKey == "Daily") syncWidgetDone(pkg)
                 }
                 container.addView(row)
             }
@@ -447,6 +448,17 @@ class GameOverlayService : AccessibilityService() {
                 result
             }
         } catch (e: Exception) { emptyMap() }
+    }
+
+    private fun syncWidgetDone(pkg: String) {
+        val dailyTasks = loadTasksByCategory(pkg)["Daily"] ?: return
+        if (dailyTasks.isEmpty()) return
+        val allDone = dailyTasks.indices.all { i -> isTaskDone(pkg, "Daily", i) }
+        getSharedPreferences("done_status", MODE_PRIVATE)
+            .edit().putBoolean(pkg, allDone).apply()
+        HomeworkWidget.updateAllWidgets(this)
+        MiniWidget.updateAllWidgets(this)
+        SmallWidget.updateAllWidgets(this)
     }
 
     private fun isTaskDone(pkg: String, category: String, index: Int) =
