@@ -45,6 +45,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: AppAdapter
     private val appList = mutableListOf<AppInfo>()
 
+    override fun onResume() {
+        super.onResume()
+        if (::adapter.isInitialized) adapter.notifyDataSetChanged()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
