@@ -99,10 +99,8 @@ class GameOverlayService : AccessibilityService() {
     }
 
     // ─── 오버레이 뷰 생성 (WindowManager 미등록) ────────────────────────
-    private fun buildOverlayView(pkg: String): View? {
+    private fun buildOverlayView(pkg: String): View {
         val tasksByCategory = loadTasksByCategory(pkg)
-        if (tasksByCategory.none { (_, tasks) -> tasks.isNotEmpty() }) return null
-
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.overlay_game_tasks, null)
 
@@ -116,6 +114,19 @@ class GameOverlayService : AccessibilityService() {
 
         val container = view.findViewById<LinearLayout>(R.id.taskContainer)
         val dp = resources.displayMetrics.density
+
+        if (tasksByCategory.none { (_, tasks) -> tasks.isNotEmpty() }) {
+            val tvEmpty = TextView(this).apply {
+                text = "태스크를 추가해 주세요"
+                textSize = 12f
+                setTextColor(Color.parseColor("#888888"))
+                gravity = Gravity.CENTER
+                setPadding((12 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt(), (16 * dp).toInt())
+            }
+            container.addView(tvEmpty)
+            return view
+        }
+
         var firstSection = true
 
         for ((categoryKey, displayName, color) in categories) {
@@ -144,7 +155,7 @@ class GameOverlayService : AccessibilityService() {
             }
             val tvCategory = TextView(this).apply {
                 text = displayName
-                textSize = 11f
+                textSize = 12f
                 setTextColor(Color.WHITE)
                 typeface = Typeface.DEFAULT_BOLD
             }
@@ -172,6 +183,9 @@ class GameOverlayService : AccessibilityService() {
         currentAlpha = savedAlphaInt / 100f
         view.alpha = currentAlpha
 
+        val tvAlphaValue = view.findViewById<TextView>(R.id.tvAlphaValue)
+        tvAlphaValue.text = "$savedAlphaInt%"
+
         view.findViewById<SeekBar>(R.id.seekbarAlpha).apply {
             progress = savedAlphaInt
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -179,6 +193,7 @@ class GameOverlayService : AccessibilityService() {
                     currentAlpha = value.coerceAtLeast(20) / 100f
                     view.alpha = currentAlpha
                     tabView?.alpha = currentAlpha
+                    tvAlphaValue.text = "$value%"
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
                 override fun onStopTrackingTouch(sb: SeekBar?) {
@@ -188,9 +203,12 @@ class GameOverlayService : AccessibilityService() {
             })
         }
 
-        view.findViewById<TextView>(R.id.btnMinimizeOverlay).setOnClickListener {
-            isMinimized = true
-            minimizeToTab(pkg)
+        view.findViewById<TextView>(R.id.btnMinimizeOverlay).apply {
+            contentDescription = "오버레이 최소화"
+            setOnClickListener {
+                isMinimized = true
+                minimizeToTab(pkg)
+            }
         }
 
         return view
@@ -287,7 +305,7 @@ class GameOverlayService : AccessibilityService() {
 
     // ─── 드래그 중 오버레이 미리 생성 (translationX로 화면 밖에 숨김) ──
     private fun prepareRevealOverlay(pkg: String) {
-        val view = buildOverlayView(pkg) ?: return
+        val view = buildOverlayView(pkg)
         val params = makeOverlayParams().apply {
             flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             gravity = Gravity.LEFT or Gravity.TOP
