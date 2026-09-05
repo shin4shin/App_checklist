@@ -265,13 +265,43 @@ class GameOverlayService : AccessibilityService() {
         var initTabY  = 0
         var dragDir   = 0    // 0=미결정, 1=세로, 2=가로(오버레이 당김)
         var hasDragged = false
-        var isLongPress = false
         val dp = resources.displayMetrics.density
-        val longPressRunnable = Runnable {
-            isLongPress = true
-            tab.text = "✕"
-            tab.setTextColor(android.graphics.Color.parseColor("#FF6666"))
+        val screenHeight = resources.displayMetrics.heightPixels
+        val deleteZoneTop = screenHeight - (110 * dp).toInt()
+        var deleteZoneView: View? = null
+
+        fun showDeleteZone() {
+            if (deleteZoneView != null) return
+            val dz = android.widget.TextView(this).apply {
+                text = "× 삭제"
+                textSize = 14f
+                setTextColor(android.graphics.Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding((28 * dp).toInt(), (12 * dp).toInt(), (28 * dp).toInt(), (12 * dp).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = 40 * dp
+                    setColor(android.graphics.Color.parseColor("#CC333333"))
+                }
+            }
+            val p = makeOverlayParams().apply {
+                width  = WindowManager.LayoutParams.WRAP_CONTENT
+                height = WindowManager.LayoutParams.WRAP_CONTENT
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                y = (48 * dp).toInt()
+            }
+            windowManager?.addView(dz, p)
+            deleteZoneView = dz
         }
+
+        fun hideDeleteZone() {
+            deleteZoneView?.let {
+                try { windowManager?.removeView(it) } catch (e: Exception) {}
+            }
+            deleteZoneView = null
+        }
+
+        fun isInDeleteZone(rawY: Float) = rawY > deleteZoneTop
 
         tab.setOnTouchListener { _, event ->
             when (event.action) {
@@ -281,74 +311,64 @@ class GameOverlayService : AccessibilityService() {
                     initTabY   = tabParams.y
                     dragDir    = 0
                     hasDragged = false
-                    isLongPress = false
-                    handler.postDelayed(longPressRunnable, 450)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - touchStartX
                     val dy = event.rawY - touchStartY
-                    if (isLongPress) {
-                        // 롱프레스 모드: 아래로 드래그 진행도에 따라 페이드
-                        val progress = (dy / (80 * dp)).coerceIn(0f, 1f)
-                        tab.alpha = currentAlpha * (1f - progress * 0.6f)
-                    } else {
-                        // 일반 드래그 중이면 롱프레스 취소
-                        if (abs(dx) > 10 * dp || abs(dy) > 10 * dp) {
-                            handler.removeCallbacks(longPressRunnable)
-                        }
-                        if (dragDir == 0) {
-                            val adx = abs(dx)
-                            val ady = abs(dy)
-                            val minH = 24 * dp
-                            when {
-                                adx > ady * 2.5f && adx > minH -> {
-                                    hasDragged = true
-                                    dragDir = 2
-                                    prepareRevealOverlay(pkg)
-                                    completeReveal(pkg, tab, tabParams)
-                                }
-                                ady > adx -> {
-                                    hasDragged = ady > 8
-                                    if (hasDragged) dragDir = 1
-                                }
+                    if (dragDir == 0) {
+                        val adx = abs(dx)
+                        val ady = abs(dy)
+                        val minH = 24 * dp
+                        when {
+                            adx > ady * 2.5f && adx > minH -> {
+                                hasDragged = true
+                                dragDir = 2
+                                prepareRevealOverlay(pkg)
+                                completeReveal(pkg, tab, tabParams)
+                            }
+                            ady > adx -> {
+                                hasDragged = ady > 8
+                                if (hasDragged) dragDir = 1
                             }
                         }
-                        if (dragDir == 1) {
-                            tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
-                            savedY = tabParams.y
-                            windowManager?.updateViewLayout(tab, tabParams)
+                    }
+                    if (dragDir == 1) {
+                        tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
+                        savedY = tabParams.y
+                        windowManager?.updateViewLayout(tab, tabParams)
+                        if (dy > 0) {
+                            showDeleteZone()
+                            val inZone = isInDeleteZone(event.rawY)
+                            (deleteZoneView as? android.widget.TextView)?.apply {
+                                setTextColor(
+                                    if (inZone) android.graphics.Color.parseColor("#FF4444")
+                                    else android.graphics.Color.WHITE
+                                )
+                                (background as? android.graphics.drawable.GradientDrawable)
+                                    ?.setColor(
+                                        if (inZone) android.graphics.Color.parseColor("#CC880000")
+                                        else android.graphics.Color.parseColor("#CC333333")
+                                    )
+                            }
                         }
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    handler.removeCallbacks(longPressRunnable)
-                    if (isLongPress) {
-                        isLongPress = false
-                        val dy = event.rawY - touchStartY
-                        if (dy > 80 * dp) {
-                            userDismissed = true
-                            isMinimized = false
-                            hideAll()
-                        } else {
-                            tab.text = "▶"
-                            tab.setTextColor(android.graphics.Color.parseColor("#7EA8FF"))
-                            tab.alpha = currentAlpha
-                        }
-                    } else {
-                        if (!hasDragged) expandFromTab(pkg)
+                    val inZone = isInDeleteZone(event.rawY) && dragDir == 1
+                    hideDeleteZone()
+                    if (inZone) {
+                        userDismissed = true
+                        isMinimized = false
+                        hideAll()
+                    } else if (!hasDragged) {
+                        expandFromTab(pkg)
                     }
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    handler.removeCallbacks(longPressRunnable)
-                    if (isLongPress) {
-                        isLongPress = false
-                        tab.text = "▶"
-                        tab.setTextColor(android.graphics.Color.parseColor("#7EA8FF"))
-                        tab.alpha = currentAlpha
-                    }
+                    hideDeleteZone()
                     false
                 }
                 else -> false
