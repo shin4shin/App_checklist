@@ -33,6 +33,7 @@ class GameOverlayService : AccessibilityService() {
     private var savedY = -1
     private var isMinimized = false
     private var currentAlpha = 0.9f
+    private var userDismissed = false  // 사용자가 직접 닫은 경우 재생성 억제
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingHideRunnable: Runnable? = null
@@ -62,18 +63,21 @@ class GameOverlayService : AccessibilityService() {
             .getStringSet("apps", emptySet()) ?: emptySet()
 
         if (pkg in registeredApps) {
-            // 등록된 앱이 포그라운드 → 예약된 hideAll 취소
             cancelPendingHide()
             if (pkg != currentPkg) {
+                // 다른 등록 앱으로 전환 → 직접 닫기 상태 초기화 후 새로 표시
+                userDismissed = false
                 isMinimized = false
                 currentPkg = pkg
                 showOverlay(pkg)
-            } else if (overlayView == null && tabView == null) {
+            } else if (!userDismissed && overlayView == null && tabView == null) {
+                // 같은 앱이 다시 포그라운드 + 사용자가 직접 닫지 않은 경우만 재생성
                 if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
             }
         } else {
-            // 시스템 UI는 무시, 그 외는 500ms 뒤 hideAll (게임 내 SDK·다이얼로그 오판 방지)
             if (currentPkg != null && !isSystemUiPackage(pkg)) {
+                // 게임을 나갔으면 직접 닫기 상태 초기화 (다음에 돌아오면 다시 표시)
+                userDismissed = false
                 schedulePendingHide()
             }
         }
@@ -324,7 +328,7 @@ class GameOverlayService : AccessibilityService() {
                         isLongPress = false
                         val dy = event.rawY - touchStartY
                         if (dy > 80 * dp) {
-                            currentPkg = null
+                            userDismissed = true
                             isMinimized = false
                             hideAll()
                         } else {
