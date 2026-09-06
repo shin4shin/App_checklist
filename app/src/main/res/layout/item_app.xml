@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- res/layout/item_app.xml -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="64dp"
     android:orientation="horizontal"
-    android:paddingStart="12dp"
+    android:paddingStart="16dp"
     android:paddingEnd="4dp"
     android:paddingTop="10dp"
     android:paddingBottom="10dp"
@@ -14,15 +13,17 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- 완료 여부 체크 표시 -->
+    <!-- MD3: 체크 — colorPrimary -->
     <TextView
         android:id="@+id/tvCheck"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:text="✓"
-        android:textSize="20sp"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorPrimary"
         android:gravity="center"
-        android:visibility="invisible"/>
+        android:visibility="invisible" />
 
     <!-- 앱 아이콘 -->
     <ImageView
@@ -30,34 +31,36 @@
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_marginStart="4dp"
-        android:contentDescription="앱 아이콘"/>
+        android:contentDescription="앱 아이콘" />
 
-    <!-- 앱 이름 -->
+    <!-- 앱 이름 — MD3 BodyLarge -->
     <TextView
         android:id="@+id/tvAppName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp"
-        android:layout_marginStart="12dp"/>
+        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+        android:layout_marginStart="12dp" />
 
-    <!-- 설정된 초기화 시간 -->
+    <!-- 초기화 시간 — MD3 LabelMedium / colorOnSurfaceVariant -->
     <TextView
         android:id="@+id/tvResetTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="미설정"
-        android:textColor="#888888"
-        android:layout_marginEnd="8dp"/>
+        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:layout_marginEnd="4dp" />
 
-    <!-- 시간 설정 버튼 -->
-    <Button
+    <!-- MD3 Text Button -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSetTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:minWidth="56dp"
         android:minHeight="48dp"
-        android:minWidth="48dp"
         android:text="설정"
-        style="@style/Widget.AppCompat.Button.Borderless"/>
+        android:textSize="13sp"
+        style="@style/Widget.Material3.Button.TextButton" />
 
 </LinearLayout>

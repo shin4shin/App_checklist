@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -9,50 +10,44 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- 상단 타이틀 + 메뉴 버튼 -->
-        <LinearLayout
+        <!-- MD3 Top App Bar -->
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingTop="48dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="   데일리 설정"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+            android:paddingTop="36dp"
+            android:background="?attr/colorPrimary"
+            app:title="데일리 설정"
+            app:titleTextColor="?attr/colorOnPrimary"
+            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
 
             <TextView
                 android:id="@+id/tvMenu"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:layout_gravity="end"
                 android:gravity="center"
                 android:text="⋮"
                 android:textSize="24sp"
-                android:padding="4dp"
+                android:textColor="?attr/colorOnPrimary"
                 android:contentDescription="메뉴 열기"
                 android:foreground="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
-                android:focusable="true"/>
+                android:focusable="true" />
 
-        </LinearLayout>
+        </com.google.android.material.appbar.MaterialToolbar>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvApps"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:paddingTop="4dp"
             android:paddingBottom="8dp"
-            android:clipToPadding="false"/>
+            android:clipToPadding="false" />
 
-        <!-- 저장 버튼 (네비게이션 바 바로 위 고정) -->
-        <Button
+        <!-- MD3 Filled Button (저장) — colorSecondary(오렌지) -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -61,12 +56,13 @@
             android:layout_marginBottom="60dp"
             android:text="저장"
             android:textSize="16sp"
-            android:backgroundTint="#4CAF50"
-            android:textColor="#FFFFFF"/>
+            app:backgroundTint="?attr/colorSecondary"
+            android:textColor="?attr/colorOnSecondary"
+            style="@style/Widget.Material3.Button" />
 
     </LinearLayout>
 
-    <!-- 앱 추가 버튼 -->
+    <!-- MD3 FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddApp"
         android:layout_width="wrap_content"
@@ -75,47 +71,47 @@
         android:layout_marginEnd="32dp"
         android:layout_marginBottom="128dp"
         android:src="@android:drawable/ic_input_add"
-        android:contentDescription="앱 추가"/>
+        android:contentDescription="앱 추가" />
 
-    <!-- 선택 모드 하단 액션바 -->
+    <!-- 선택 모드 하단 액션바 — MD3 tonal surface -->
     <LinearLayout
         android:id="@+id/layoutSelectionBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:orientation="horizontal"
-        android:background="#1E1E1E"
+        android:background="?attr/colorSurfaceVariant"
         android:paddingTop="8dp"
         android:paddingBottom="16dp"
         android:elevation="8dp"
         android:visibility="gone">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectionDelete"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="삭제"
-            android:textColor="#FF5252"
-            style="@style/Widget.AppCompat.Button.Borderless"/>
+            android:textColor="?attr/colorError"
+            style="@style/Widget.Material3.Button.TextButton" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectionSetTime"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="데일리 설정"
-            android:textColor="#FFFFFF"
-            style="@style/Widget.AppCompat.Button.Borderless"/>
+            android:textColor="?attr/colorPrimary"
+            style="@style/Widget.Material3.Button.TextButton" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSelectionCancel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="그만두기"
-            android:textColor="#AAAAAA"
-            style="@style/Widget.AppCompat.Button.Borderless"/>
+            android:textColor="?attr/colorOnSurfaceVariant"
+            style="@style/Widget.Material3.Button.TextButton" />
 
     </LinearLayout>
 

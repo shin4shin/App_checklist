@@ -2,4 +2,34 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- MD3 Teal primary -->
+    <color name="md_primary">#0D9488</color>
+    <color name="md_on_primary">#FFFFFF</color>
+    <color name="md_primary_container">#CCFBF1</color>
+    <color name="md_on_primary_container">#134E4A</color>
+
+    <!-- MD3 Secondary (action orange) -->
+    <color name="md_secondary">#EA580C</color>
+    <color name="md_on_secondary">#FFFFFF</color>
+    <color name="md_secondary_container">#FFEDD5</color>
+    <color name="md_on_secondary_container">#7C2D12</color>
+
+    <!-- MD3 Error -->
+    <color name="md_error">#DC2626</color>
+    <color name="md_on_error">#FFFFFF</color>
+
+    <!-- MD3 Surface (light) -->
+    <color name="md_surface">#F8FFFE</color>
+    <color name="md_on_surface">#1A1C1E</color>
+    <color name="md_surface_variant">#DAE5E3</color>
+    <color name="md_on_surface_variant">#3F4948</color>
+    <color name="md_outline_variant">#BEC9C7</color>
+
+    <!-- MD3 Surface (dark) -->
+    <color name="md_surface_dark">#0F1A19</color>
+    <color name="md_on_surface_dark">#E0E3E2</color>
+    <color name="md_primary_dark">#4DDCCB</color>
+    <color name="md_on_primary_dark">#00363A</color>
+    <color name="md_primary_container_dark">#004F4C</color>
 </resources>

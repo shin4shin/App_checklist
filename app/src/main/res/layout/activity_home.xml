@@ -1,196 +1,267 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
+    <!-- MD3 Top App Bar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="36dp"
+        android:background="?attr/colorPrimary"
+        app:title="스케줄러"
+        app:titleTextColor="?attr/colorOnPrimary"
+        app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
+
+    <!-- 서브타이틀 영역 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="200dp"
-        android:paddingBottom="16dp">
+        android:background="?attr/colorPrimary"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="20dp">
 
-        <!-- Row 1: Daily, Weekly -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:id="@+id/cardDaily"
-                android:layout_width="0dp"
-                android:layout_height="150dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_menu_card"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-                <ImageView
-                    android:id="@+id/imgDaily"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/ic_placeholder_menu"
-                    android:contentDescription="Daily icon"
-                    android:scaleType="centerInside" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Daily"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp" />
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/cardWeekly"
-                android:layout_width="0dp"
-                android:layout_height="150dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:layout_marginStart="6dp"
-                android:background="@drawable/bg_menu_card"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-                <ImageView
-                    android:id="@+id/imgWeekly"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/ic_placeholder_menu"
-                    android:contentDescription="Weekly icon"
-                    android:scaleType="centerInside" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Weekly"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp" />
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Row 2: Monthly, Event -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:id="@+id/cardMonthly"
-                android:layout_width="0dp"
-                android:layout_height="150dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/bg_menu_card"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-                <ImageView
-                    android:id="@+id/imgMonthly"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/ic_placeholder_menu"
-                    android:contentDescription="Monthly icon"
-                    android:scaleType="centerInside" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Monthly"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp" />
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/cardEvent"
-                android:layout_width="0dp"
-                android:layout_height="150dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:layout_marginStart="6dp"
-                android:background="@drawable/bg_menu_card"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-                <ImageView
-                    android:id="@+id/imgEvent"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/ic_placeholder_menu"
-                    android:contentDescription="Event icon"
-                    android:scaleType="centerInside" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Event"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp" />
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Row 3: Premium (centered) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Space android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
-
-            <LinearLayout
-                android:id="@+id/cardPremium"
-                android:layout_width="0dp"
-                android:layout_height="150dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_horizontal"
-                android:background="@drawable/bg_menu_card"
-                android:foreground="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-                <ImageView
-                    android:id="@+id/imgPremium"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:src="@drawable/ic_placeholder_menu"
-                    android:contentDescription="Premium icon"
-                    android:scaleType="centerInside" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Premium"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp" />
-                <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-            </LinearLayout>
-
-            <Space android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
-
-        </LinearLayout>
+            android:text="어떤 일정을 관리할까요?"
+            android:textColor="?attr/colorOnPrimary"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:alpha="0.85" />
 
     </LinearLayout>
 
-</ScrollView>
+    <!-- 카드 그리드 -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp">
+
+            <!-- Row 1: Daily, Weekly -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDaily"
+                    android:layout_width="0dp"
+                    android:layout_height="150dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:foreground="?attr/selectableItemBackground"
+                    style="@style/Widget.App.MenuCard">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:id="@+id/imgDaily"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_placeholder_menu"
+                            android:contentDescription="Daily icon"
+                            android:tint="?attr/colorPrimary"
+                            android:scaleType="centerInside" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Daily"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginTop="10dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardWeekly"
+                    android:layout_width="0dp"
+                    android:layout_height="150dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:foreground="?attr/selectableItemBackground"
+                    style="@style/Widget.App.MenuCard">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:id="@+id/imgWeekly"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_placeholder_menu"
+                            android:contentDescription="Weekly icon"
+                            android:tint="?attr/colorPrimary"
+                            android:scaleType="centerInside" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Weekly"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginTop="10dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- Row 2: Monthly, Event -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardMonthly"
+                    android:layout_width="0dp"
+                    android:layout_height="150dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:foreground="?attr/selectableItemBackground"
+                    style="@style/Widget.App.MenuCard">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:id="@+id/imgMonthly"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_placeholder_menu"
+                            android:contentDescription="Monthly icon"
+                            android:tint="?attr/colorPrimary"
+                            android:scaleType="centerInside" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Monthly"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginTop="10dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardEvent"
+                    android:layout_width="0dp"
+                    android:layout_height="150dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:foreground="?attr/selectableItemBackground"
+                    style="@style/Widget.App.MenuCard">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:id="@+id/imgEvent"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_placeholder_menu"
+                            android:contentDescription="Event icon"
+                            android:tint="?attr/colorSecondary"
+                            android:scaleType="centerInside" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Event"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginTop="10dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- Row 3: Premium (가운데 정렬) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardPremium"
+                    android:layout_width="0dp"
+                    android:layout_height="150dp"
+                    android:layout_weight="0.5"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="?attr/colorSecondary"
+                    app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:id="@+id/imgPremium"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_placeholder_menu"
+                            android:contentDescription="Premium icon"
+                            android:tint="?attr/colorSecondary"
+                            android:scaleType="centerInside" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Premium"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSecondaryContainer"
+                            android:layout_marginTop="10dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>
