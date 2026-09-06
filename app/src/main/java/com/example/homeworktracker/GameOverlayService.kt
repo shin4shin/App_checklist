@@ -53,7 +53,8 @@ class GameOverlayService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        savedY = resources.displayMetrics.heightPixels / 3
+        savedY = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            .getInt("overlay_tab_y", resources.displayMetrics.heightPixels / 3)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -88,7 +89,7 @@ class GameOverlayService : AccessibilityService() {
     // ─── 오버레이 표시 ──────────────────────────────────────────────────
     private fun showOverlay(pkg: String) {
         hideAll()
-        val view = buildOverlayView(pkg) ?: return
+        val view = buildOverlayView(pkg)
 
         val topMargin = (resources.displayMetrics.heightPixels * 0.08f).toInt()
         val params = makeOverlayParams().apply {
@@ -344,6 +345,8 @@ class GameOverlayService : AccessibilityService() {
                         if (dragDir == 1) {
                             tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
                             savedY = tabParams.y
+                            getSharedPreferences("app_prefs", MODE_PRIVATE)
+                                .edit().putInt("overlay_tab_y", savedY).apply()
                             windowManager?.updateViewLayout(tab, tabParams)
                         }
                     }
@@ -382,6 +385,10 @@ class GameOverlayService : AccessibilityService() {
 
     // ─── 드래그 중 오버레이 미리 생성 (translationX로 화면 밖에 숨김) ──
     private fun prepareRevealOverlay(pkg: String) {
+        revealOverlayView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) {}
+            revealOverlayView = null
+        }
         val view = buildOverlayView(pkg)
         val params = makeOverlayParams().apply {
             flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH

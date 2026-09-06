@@ -48,13 +48,22 @@
         android:background="#22FFFFFF" />
 
     <!-- 태스크 목록 -->
-    <LinearLayout
-        android:id="@+id/taskContainer"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp" />
+        android:maxHeight="320dp"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:id="@+id/taskContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp" />
+
+    </ScrollView>
 
     <!-- 구분선 -->
     <View
