@@ -59,14 +59,6 @@ class GameOverlayService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        // 홈 화면 전환 등 일부 기기에서 TYPE_WINDOW_STATE_CHANGED 없이 이 이벤트만 발생
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            if (currentPkg != null && (overlayView != null || tabView != null) && !userDismissed) {
-                schedulePendingHide()
-            }
-            return
-        }
-
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
@@ -601,7 +593,7 @@ class GameOverlayService : AccessibilityService() {
     // 사용자가 직접 실행할 수 없는 시스템 컴포넌트(상태바·IME·systemui 등)는 무시
     // 설정·런처처럼 실제로 열 수 있는 시스템 앱은 정상 전환으로 처리
     private fun isSystemUiPackage(pkg: String): Boolean {
-        if (pkg == "android" || pkg.contains("systemui", ignoreCase = true)) return true
+        if (pkg.contains("systemui", ignoreCase = true)) return true
         return try {
             val info = packageManager.getApplicationInfo(pkg, 0)
             val isSystem = (info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
