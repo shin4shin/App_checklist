@@ -36,6 +36,7 @@ class GameOverlayService : AccessibilityService() {
     private var currentAlpha = 0.9f
     private var userDismissed = false  // 사용자가 직접 닫은 경우 재생성 억제
     private var deleteZoneView: View? = null
+    private var headerLongPressRunnable: Runnable? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingHideRunnable: Runnable? = null
@@ -109,6 +110,7 @@ class GameOverlayService : AccessibilityService() {
 
         windowManager?.addView(view, params)
         overlayView = view
+        attachHeaderDrag(view, pkg)
     }
 
     // ─── 오버레이 뷰 생성 (WindowManager 미등록) ────────────────────────
@@ -225,16 +227,6 @@ class GameOverlayService : AccessibilityService() {
                 isMinimized = true
                 minimizeToTab(pkg)
             }
-        }
-
-        // 헤더 롱프레스 → 삭제 존 표시
-        view.findViewById<View>(R.id.overlayHeader).setOnLongClickListener {
-            showDeleteZone {
-                userDismissed = true
-                isMinimized = false
-                hideAll()
-            }
-            true
         }
 
         return view
@@ -423,6 +415,7 @@ class GameOverlayService : AccessibilityService() {
                         true
                     } else false
                 }
+                overlayView?.let { attachHeaderDrag(it, pkg) }
                 try { windowManager?.removeView(tab) } catch (e: Exception) {}
                 if (tab === tabView) tabView = null
             }
@@ -455,6 +448,68 @@ class GameOverlayService : AccessibilityService() {
     private fun cancelPendingHide() {
         pendingHideRunnable?.let { handler.removeCallbacks(it) }
         pendingHideRunnable = null
+    }
+
+    private fun attachHeaderDrag(view: View, pkg: String) {
+        val header = view.findViewById<View>(R.id.overlayHeader) ?: return
+        val dp = resources.displayMetrics.density
+        val dismissAction = { userDismissed = true; isMinimized = false; hideAll() }
+        val longPressRunnable = Runnable { showDeleteZone(dismissAction) }
+        headerLongPressRunnable = longPressRunnable
+        var dragMode = false
+        var startRawY = 0f
+
+        header.setOnTouchListener { _, ev ->
+            when (ev.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startRawY = ev.rawY
+                    dragMode = false
+                    handler.postDelayed(longPressRunnable, 450)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = ev.rawY - startRawY
+                    if (!dragMode && dy > 12 * dp) {
+                        dragMode = true
+                        handler.removeCallbacks(longPressRunnable)
+                        showDeleteZone(dismissAction)
+                    }
+                    if (dragMode) {
+                        view.translationY = dy.coerceAtLeast(0f)
+                        val inZone = isInDeleteZone(ev.rawY)
+                        (deleteZoneView as? TextView)?.apply {
+                            setTextColor(if (inZone) Color.parseColor("#FF4444") else Color.WHITE)
+                            (background as? GradientDrawable)?.setColor(
+                                if (inZone) Color.parseColor("#CC880000") else Color.parseColor("#CC333333")
+                            )
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    handler.removeCallbacks(longPressRunnable)
+                    if (dragMode) {
+                        dragMode = false
+                        if (isInDeleteZone(ev.rawY)) {
+                            hideDeleteZone()
+                            dismissAction()
+                        } else {
+                            hideDeleteZone()
+                            view.animate().translationY(0f).setDuration(200).start()
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    handler.removeCallbacks(longPressRunnable)
+                    dragMode = false
+                    hideDeleteZone()
+                    view.animate().translationY(0f).setDuration(150).start()
+                    false
+                }
+                else -> false
+            }
+        }
     }
 
     private fun showDeleteZone(onConfirm: () -> Unit) {
@@ -501,6 +556,8 @@ class GameOverlayService : AccessibilityService() {
     }
 
     private fun hideAll() {
+        headerLongPressRunnable?.let { handler.removeCallbacks(it) }
+        headerLongPressRunnable = null
         overlayView?.let {
             try { windowManager?.removeView(it) } catch (e: Exception) { }
             overlayView = null
