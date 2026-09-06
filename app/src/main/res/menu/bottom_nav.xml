@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_nav_home"
+        android:title="홈" />
+    <item
+        android:id="@+id/nav_daily"
+        android:icon="@drawable/ic_nav_daily"
+        android:title="데일리" />
+    <item
+        android:id="@+id/nav_weekly"
+        android:icon="@drawable/ic_nav_weekly"
+        android:title="위클리" />
+    <item
+        android:id="@+id/nav_monthly"
+        android:icon="@drawable/ic_nav_monthly"
+        android:title="먼슬리" />
+    <item
+        android:id="@+id/nav_more"
+        android:icon="@drawable/ic_nav_more"
+        android:title="더보기" />
+</menu>
