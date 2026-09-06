@@ -59,6 +59,14 @@ class GameOverlayService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        // 홈 화면 전환 등 일부 기기에서 TYPE_WINDOW_STATE_CHANGED 없이 이 이벤트만 발생
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            if (currentPkg != null && (overlayView != null || tabView != null) && !userDismissed) {
+                schedulePendingHide()
+            }
+            return
+        }
+
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
