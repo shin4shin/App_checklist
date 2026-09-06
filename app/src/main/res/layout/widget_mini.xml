@@ -3,25 +3,32 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#CC1E1E1E"
+    android:background="#E8101828"
     android:padding="6dp">
 
-    <!-- 타이틀 + 페이지 버튼 (◀ 타이틀 ▶) -->
+    <!-- 헤더 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="4dp">
+        android:layout_marginBottom="6dp">
 
         <TextView
             android:id="@+id/btnMiniPrev"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:gravity="center"
-            android:text="◀"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:text="‹"
+            android:textColor="#93C5FD"
+            android:textSize="18sp"/>
+
+        <View
+            android:layout_width="2dp"
+            android:layout_height="12dp"
+            android:background="#2563EB"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="6dp"/>
 
         <TextView
             android:id="@+id/tvMiniTitle"
@@ -30,18 +37,25 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="데일리 체크"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textColor="#EFF6FF"
+            android:textSize="13sp"
+            android:textStyle="bold"/>
+
+        <View
+            android:layout_width="2dp"
+            android:layout_height="12dp"
+            android:background="#2563EB"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="4dp"/>
 
         <TextView
             android:id="@+id/btnMiniNext"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:gravity="center"
-            android:text="▶"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:text="›"
+            android:textColor="#93C5FD"
+            android:textSize="18sp"/>
     </LinearLayout>
 
     <!-- 아이콘 그리드 (2x2) -->
@@ -60,33 +74,37 @@
 
             <FrameLayout android:id="@+id/miniCell1"
                 android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:gravity="center">
+                android:layout_weight="1" android:gravity="center"
+                android:background="#0D2563EB">
                 <ImageView android:id="@+id/miniIcon1"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"/>
                 <TextView android:id="@+id/miniCheck1"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"
-                    android:text="✓" android:textSize="28sp"
-                    android:textColor="#4CAF50" android:gravity="center"
+                    android:text="✓" android:textSize="26sp"
+                    android:textColor="#60A5FA" android:gravity="center"
                     android:textStyle="bold" android:visibility="gone"/>
             </FrameLayout>
 
             <FrameLayout android:id="@+id/miniCell3"
                 android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:gravity="center">
+                android:layout_weight="1" android:gravity="center"
+                android:background="#0D2563EB">
                 <ImageView android:id="@+id/miniIcon3"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"/>
                 <TextView android:id="@+id/miniCheck3"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"
-                    android:text="✓" android:textSize="28sp"
-                    android:textColor="#4CAF50" android:gravity="center"
+                    android:text="✓" android:textSize="26sp"
+                    android:textColor="#60A5FA" android:gravity="center"
                     android:textStyle="bold" android:visibility="gone"/>
             </FrameLayout>
 
         </LinearLayout>
+
+        <View android:layout_width="1dp" android:layout_height="match_parent" android:background="#0D3B82F6"/>
 
         <!-- 오른쪽 열 -->
         <LinearLayout
@@ -97,29 +115,33 @@
 
             <FrameLayout android:id="@+id/miniCell2"
                 android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:gravity="center">
+                android:layout_weight="1" android:gravity="center"
+                android:background="#0D2563EB">
                 <ImageView android:id="@+id/miniIcon2"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"/>
                 <TextView android:id="@+id/miniCheck2"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"
-                    android:text="✓" android:textSize="28sp"
-                    android:textColor="#4CAF50" android:gravity="center"
+                    android:text="✓" android:textSize="26sp"
+                    android:textColor="#60A5FA" android:gravity="center"
                     android:textStyle="bold" android:visibility="gone"/>
             </FrameLayout>
 
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#0D3B82F6"/>
+
             <FrameLayout android:id="@+id/miniCell4"
                 android:layout_width="match_parent" android:layout_height="0dp"
-                android:layout_weight="1" android:gravity="center">
+                android:layout_weight="1" android:gravity="center"
+                android:background="#0D2563EB">
                 <ImageView android:id="@+id/miniIcon4"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"/>
                 <TextView android:id="@+id/miniCheck4"
-                    android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_width="34dp" android:layout_height="34dp"
                     android:layout_gravity="center"
-                    android:text="✓" android:textSize="28sp"
-                    android:textColor="#4CAF50" android:gravity="center"
+                    android:text="✓" android:textSize="26sp"
+                    android:textColor="#60A5FA" android:gravity="center"
                     android:textStyle="bold" android:visibility="gone"/>
             </FrameLayout>
 

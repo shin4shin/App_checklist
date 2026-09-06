@@ -79,7 +79,7 @@ class GameOverlayService : AccessibilityService() {
                 if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
             }
         } else {
-            if (currentPkg != null && !isSystemUiPackage(pkg)) {
+            if (currentPkg != null && (!isSystemUiPackage(pkg) || isHomeLauncherPackage(pkg))) {
                 // 게임을 나갔으면 직접 닫기 상태 초기화 (다음에 돌아오면 다시 표시)
                 userDismissed = false
                 schedulePendingHide()
@@ -93,10 +93,13 @@ class GameOverlayService : AccessibilityService() {
         val view = buildOverlayView(pkg)
 
         val topMargin = (resources.displayMetrics.heightPixels * 0.08f).toInt()
+        val isPortrait = resources.configuration.orientation ==
+                android.content.res.Configuration.ORIENTATION_PORTRAIT
+        val leftMargin = if (isPortrait) (16 * resources.displayMetrics.density).toInt() else 0
         val params = makeOverlayParams().apply {
             flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             gravity = Gravity.LEFT or Gravity.TOP
-            x = 0
+            x = leftMargin
             y = topMargin
         }
 
@@ -382,10 +385,12 @@ class GameOverlayService : AccessibilityService() {
             revealOverlayView = null
         }
         val view = buildOverlayView(pkg)
+        val isPortrait = resources.configuration.orientation ==
+                android.content.res.Configuration.ORIENTATION_PORTRAIT
         val params = makeOverlayParams().apply {
             flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             gravity = Gravity.LEFT or Gravity.TOP
-            x = 0
+            x = if (isPortrait) (16 * resources.displayMetrics.density).toInt() else 0
             y = (resources.displayMetrics.heightPixels * 0.08f).toInt()
         }
         view.translationX = -overlayWidthPx.toFloat()  // 화면 왼쪽 밖으로 숨김
@@ -592,6 +597,13 @@ class GameOverlayService : AccessibilityService() {
 
     // 사용자가 직접 실행할 수 없는 시스템 컴포넌트(상태바·IME·systemui 등)는 무시
     // 설정·런처처럼 실제로 열 수 있는 시스템 앱은 정상 전환으로 처리
+    private fun isHomeLauncherPackage(pkg: String): Boolean {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+            .addCategory(android.content.Intent.CATEGORY_HOME)
+        val info = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        return info?.activityInfo?.packageName == pkg
+    }
+
     private fun isSystemUiPackage(pkg: String): Boolean {
         if (pkg.contains("systemui", ignoreCase = true)) return true
         return try {
