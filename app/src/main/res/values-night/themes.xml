@@ -4,17 +4,17 @@
         <item name="colorOnPrimary">@color/md_on_primary_dark</item>
         <item name="colorPrimaryContainer">@color/md_primary_container_dark</item>
         <item name="colorOnPrimaryContainer">@color/md_primary_container</item>
-        <item name="colorSecondary">#FFB98A</item>
-        <item name="colorOnSecondary">@color/md_on_secondary_container</item>
-        <item name="colorSecondaryContainer">#5B1D00</item>
-        <item name="colorOnSecondaryContainer">#FFDBCC</item>
+        <item name="colorSecondary">#60A5FA</item>
+        <item name="colorOnSecondary">#1E3A8A</item>
+        <item name="colorSecondaryContainer">#1D4ED8</item>
+        <item name="colorOnSecondaryContainer">#DBEAFE</item>
         <item name="colorError">#FFB4AB</item>
         <item name="android:colorBackground">@color/md_surface_dark</item>
         <item name="colorSurface">@color/md_surface_dark</item>
         <item name="colorOnSurface">@color/md_on_surface_dark</item>
-        <item name="colorSurfaceVariant">#3F4948</item>
-        <item name="colorOnSurfaceVariant">#BEC9C7</item>
-        <item name="colorOutlineVariant">#3F4948</item>
+        <item name="colorSurfaceVariant">#1E2A4A</item>
+        <item name="colorOnSurfaceVariant">#A8B8D8</item>
+        <item name="colorOutlineVariant">#2A3A5A</item>
     </style>
 
     <style name="Theme.HomeworkTracker" parent="Base.Theme.HomeworkTracker" />
