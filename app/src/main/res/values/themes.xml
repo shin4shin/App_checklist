@@ -1,5 +1,5 @@
 <resources>
-    <style name="Base.Theme.HomeworkTracker" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.HomeworkTracker" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/md_primary</item>
         <item name="colorOnPrimary">@color/md_on_primary</item>
         <item name="colorPrimaryContainer">@color/md_primary_container</item>
@@ -19,7 +19,6 @@
 
     <style name="Theme.HomeworkTracker" parent="Base.Theme.HomeworkTracker" />
 
-    <!-- MD3 카드 스타일 — tonal surface, shape.medium(12dp) -->
     <style name="Widget.App.MenuCard" parent="Widget.Material3.CardView.Outlined">
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">0dp</item>

@@ -40,19 +40,31 @@ class HomeActivity : AppCompatActivity() {
 
         if (overlayOk && accessibilityOk && alarmOk) return
 
-        val missing = buildString {
-            if (!overlayOk) appendLine("• 다른 앱 위에 표시 — 오버레이 표시에 필요")
-            if (!accessibilityOk) appendLine("• 접근성 서비스 — 실행 중인 앱 감지에 필요")
-            if (!alarmOk) appendLine("• 정확한 알람 — 일일 초기화에 필요")
-        }.trimEnd()
+        val labels = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+
+        if (!overlayOk) {
+            labels.add("다른 앱 위에 표시 설정")
+            actions.add {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            }
+        }
+        if (!accessibilityOk) {
+            labels.add("접근성 서비스 설정")
+            actions.add { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+        }
+        if (!alarmOk) {
+            labels.add("정확한 알람 설정")
+            actions.add {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+            }
+        }
 
         AlertDialog.Builder(this)
             .setTitle("권한 설정 필요")
-            .setMessage("아래 권한이 설정되지 않아 일부 기능이 동작하지 않습니다.\n\n$missing")
-            .setPositiveButton("설정하러 가기") { _, _ ->
-                findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_more
-            }
-            .setNegativeButton("나중에") { d, _ -> d.dismiss() }
+            .setItems(labels.toTypedArray()) { _, which -> actions[which]() }
+            .setNegativeButton("나중에", null)
             .show()
     }
 

@@ -3,33 +3,23 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- MD3 Blue primary -->
-    <color name="md_primary">#2563EB</color>
-    <color name="md_on_primary">#FFFFFF</color>
-    <color name="md_primary_container">#DBEAFE</color>
-    <color name="md_on_primary_container">#1E3A8A</color>
+    <!-- GitHub Dark Palette -->
+    <color name="md_primary">#2F81F7</color>
+    <color name="md_on_primary">#0D1117</color>
+    <color name="md_primary_container">#1C2D4F</color>
+    <color name="md_on_primary_container">#58A6FF</color>
 
-    <!-- MD3 Secondary (light blue) -->
-    <color name="md_secondary">#3B82F6</color>
-    <color name="md_on_secondary">#FFFFFF</color>
-    <color name="md_secondary_container">#EFF6FF</color>
-    <color name="md_on_secondary_container">#1E40AF</color>
+    <color name="md_secondary">#8B949E</color>
+    <color name="md_on_secondary">#0D1117</color>
+    <color name="md_secondary_container">#21262D</color>
+    <color name="md_on_secondary_container">#C9D1D9</color>
 
-    <!-- MD3 Error -->
-    <color name="md_error">#DC2626</color>
-    <color name="md_on_error">#FFFFFF</color>
+    <color name="md_error">#F85149</color>
+    <color name="md_on_error">#0D1117</color>
 
-    <!-- MD3 Surface (light) -->
-    <color name="md_surface">#F8FAFF</color>
-    <color name="md_on_surface">#1A1C1E</color>
-    <color name="md_surface_variant">#E0E8F9</color>
-    <color name="md_on_surface_variant">#3A4258</color>
-    <color name="md_outline_variant">#C0C8DC</color>
-
-    <!-- MD3 Surface (dark) -->
-    <color name="md_surface_dark">#0F1220</color>
-    <color name="md_on_surface_dark">#E1E3E8</color>
-    <color name="md_primary_dark">#93C5FD</color>
-    <color name="md_on_primary_dark">#1E3A8A</color>
-    <color name="md_primary_container_dark">#1D4ED8</color>
+    <color name="md_surface">#0D1117</color>
+    <color name="md_on_surface">#F0F6FC</color>
+    <color name="md_surface_variant">#161B22</color>
+    <color name="md_on_surface_variant">#8B949E</color>
+    <color name="md_outline_variant">#30363D</color>
 </resources>

@@ -11,15 +11,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="36dp"
-        android:background="?attr/colorPrimary"
+        android:background="?attr/colorSurfaceVariant"
         app:title="스케줄러"
-        app:titleTextColor="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnSurface"
         app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
+        android:background="?attr/colorSurfaceVariant"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
         android:paddingBottom="20dp">
@@ -28,7 +28,7 @@
             android:id="@+id/tvTodayDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="?attr/colorOnPrimary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:alpha="0.85" />
     </LinearLayout>
@@ -56,7 +56,7 @@
                 android:text="데일리 앱 설정하기"
                 style="@style/Widget.Material3.Button"
                 app:backgroundTint="?attr/colorPrimary"
-                android:textColor="?attr/colorOnPrimary" />
+                android:textColor="?attr/colorOnSurface" />
 
         </LinearLayout>
     </ScrollView>
