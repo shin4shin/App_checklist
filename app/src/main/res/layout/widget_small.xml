@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#E8101828">
+    android:background="#E80D1117">
 
     <!-- 헤더 -->
     <LinearLayout
@@ -11,14 +11,14 @@
         android:layout_height="40dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#1A2563EB"
+        android:background="#FF161B22"
         android:paddingStart="12dp"
         android:paddingEnd="6dp">
 
         <View
             android:layout_width="3dp"
             android:layout_height="18dp"
-            android:background="#2563EB"
+            android:background="#2F81F7"
             android:layout_marginEnd="8dp"/>
 
         <TextView
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="데일리 체크"
-            android:textColor="#EFF6FF"
+            android:textColor="#F0F6FC"
             android:textSize="13sp"
             android:textStyle="bold"/>
 
@@ -35,7 +35,7 @@
             android:id="@+id/tvSmallPageInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#6094CE"
+            android:textColor="#8B949E"
             android:textSize="10sp"
             android:layout_marginEnd="4dp"/>
 
@@ -45,7 +45,7 @@
             android:layout_height="28dp"
             android:gravity="center"
             android:text="‹"
-            android:textColor="#93C5FD"
+            android:textColor="#58A6FF"
             android:textSize="20sp"/>
 
         <TextView
@@ -54,7 +54,7 @@
             android:layout_height="28dp"
             android:gravity="center"
             android:text="›"
-            android:textColor="#93C5FD"
+            android:textColor="#58A6FF"
             android:textSize="20sp"/>
     </LinearLayout>
 
@@ -65,12 +65,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck1" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon1" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName1" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -80,12 +80,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck2" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon2" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName2" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -95,12 +95,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck3" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon3" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName3" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -110,12 +110,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck4" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon4" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName4" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -125,12 +125,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck5" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon5" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName5" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -140,12 +140,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck6" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon6" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName6" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -155,12 +155,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck7" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon7" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName7" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -170,12 +170,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck8" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon8" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName8" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 
@@ -185,12 +185,12 @@
         android:paddingStart="10dp" android:paddingEnd="8dp">
         <TextView android:id="@+id/smallCheck9" android:layout_width="24dp"
             android:layout_height="wrap_content" android:gravity="center"
-            android:textSize="20sp" android:textColor="#60A5FA"/>
+            android:textSize="20sp" android:textColor="#8B949E"/>
         <ImageView android:id="@+id/smallIcon9" android:layout_width="28dp"
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/smallName9" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:textSize="20sp" android:textColor="#DBEAFE"
+            android:textSize="20sp" android:textColor="#F0F6FC"
             android:maxLines="1" android:ellipsize="end"/>
     </LinearLayout>
 

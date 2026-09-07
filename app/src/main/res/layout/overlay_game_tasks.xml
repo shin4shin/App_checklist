@@ -16,7 +16,7 @@
         android:gravity="center_vertical"
         android:paddingStart="12dp"
         android:paddingEnd="4dp"
-        android:background="#1AFFFFFF">
+        android:background="#22161B22">
 
         <TextView
             android:id="@+id/tvOverlayTitle"
@@ -45,7 +45,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#22FFFFFF" />
+        android:background="#4030363D" />
 
     <!-- 태스크 목록 -->
     <ScrollView
@@ -69,7 +69,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#22FFFFFF" />
+        android:background="#4030363D" />
 
     <!-- 알파 슬라이더 -->
     <LinearLayout

@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#E8101828">
+    android:background="#E80D1117">
 
     <!-- 헤더 -->
     <LinearLayout
@@ -11,7 +11,7 @@
         android:layout_height="44dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#22244B8A"
+        android:background="#FF161B22"
         android:paddingStart="14dp"
         android:paddingEnd="8dp">
 
@@ -21,7 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="데일리 체크"
-            android:textColor="#EFF6FF"
+            android:textColor="#F0F6FC"
             android:textSize="15sp"
             android:textStyle="bold"/>
 
@@ -29,7 +29,7 @@
             android:id="@+id/tvPageInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#6094CE"
+            android:textColor="#8B949E"
             android:textSize="11sp"
             android:layout_marginEnd="6dp"/>
 
@@ -39,7 +39,7 @@
             android:layout_height="32dp"
             android:gravity="center"
             android:text="‹"
-            android:textColor="#93C5FD"
+            android:textColor="#58A6FF"
             android:textSize="22sp"/>
 
         <TextView
@@ -48,7 +48,7 @@
             android:layout_height="32dp"
             android:gravity="center"
             android:text="›"
-            android:textColor="#93C5FD"
+            android:textColor="#58A6FF"
             android:textSize="22sp"/>
     </LinearLayout>
 
@@ -63,10 +63,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName1" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch1" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row2"
@@ -79,10 +79,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName2" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch2" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row3"
@@ -95,10 +95,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName3" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch3" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row4"
@@ -111,10 +111,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName4" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch4" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row5"
@@ -127,10 +127,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName5" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch5" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row6"
@@ -143,10 +143,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName6" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch6" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row7"
@@ -159,10 +159,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName7" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch7" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row8"
@@ -175,10 +175,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName8" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch8" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/row9"
@@ -191,10 +191,10 @@
             android:layout_height="28dp" android:layout_marginStart="4dp" android:layout_marginEnd="6dp"/>
         <TextView android:id="@+id/tvAppName9" android:layout_width="0dp"
             android:layout_height="wrap_content" android:layout_weight="1"
-            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#DBEAFE"/>
+            android:ellipsize="end" android:maxLines="1" android:textSize="20sp" android:textColor="#F0F6FC"/>
         <TextView android:id="@+id/btnLaunch9" android:layout_width="32dp"
             android:layout_height="match_parent" android:gravity="center"
-            android:text="›" android:textColor="#3B82F6" android:textSize="28sp"/>
+            android:text="›" android:textColor="#2F81F7" android:textSize="28sp"/>
     </LinearLayout>
 
 </LinearLayout>

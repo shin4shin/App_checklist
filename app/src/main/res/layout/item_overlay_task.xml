@@ -16,7 +16,7 @@
         android:layout_height="32dp"
         android:text="○"
         android:textSize="18sp"
-        android:textColor="#666688"
+        android:textColor="#8B949E"
         android:gravity="center" />
 
     <TextView
@@ -24,7 +24,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textColor="#FFFFFF"
+        android:textColor="#F0F6FC"
         android:textSize="13sp"
         android:ellipsize="end"
         android:maxLines="1" />

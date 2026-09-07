@@ -101,11 +101,11 @@ class SmallWidget : AppWidgetProvider() {
                     views.setTextViewText(nameId, name)
                     views.setTextViewText(checkId, if (isDone) "✓" else "○")
                     views.setTextColor(checkId,
-                        if (isDone) android.graphics.Color.parseColor("#4CAF50")
-                        else android.graphics.Color.parseColor("#888888"))
+                        if (isDone) android.graphics.Color.parseColor("#3FB950")
+                        else android.graphics.Color.parseColor("#8B949E"))
                     views.setTextColor(nameId,
-                        if (isDone) android.graphics.Color.parseColor("#4CAF50")
-                        else android.graphics.Color.WHITE)
+                        if (isDone) android.graphics.Color.parseColor("#3FB950")
+                        else android.graphics.Color.parseColor("#F0F6FC"))
 
                     try { views.setImageViewBitmap(iconId, drawableToBitmap(icon)) } catch (e: Exception) { }
 

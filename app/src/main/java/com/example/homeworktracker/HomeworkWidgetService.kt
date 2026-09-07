@@ -71,12 +71,12 @@ class HomeworkListFactory(
         views.setTextViewText(R.id.tvItemCheck, if (isDone) "✓" else "○")
         views.setTextViewText(R.id.tvItemName, name)
         views.setTextColor(R.id.tvItemCheck,
-            if (isDone) android.graphics.Color.parseColor("#4CAF50")
-            else android.graphics.Color.parseColor("#888888")
+            if (isDone) android.graphics.Color.parseColor("#3FB950")
+            else android.graphics.Color.parseColor("#8B949E")
         )
         views.setTextColor(R.id.tvItemName,
-            if (isDone) android.graphics.Color.parseColor("#4CAF50")
-            else android.graphics.Color.WHITE
+            if (isDone) android.graphics.Color.parseColor("#3FB950")
+            else android.graphics.Color.parseColor("#F0F6FC")
         )
 
         try {

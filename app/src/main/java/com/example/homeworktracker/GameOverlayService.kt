@@ -45,10 +45,10 @@ class GameOverlayService : AccessibilityService() {
 
     private data class Category(val key: String, val displayName: String, val color: Int)
     private val categories = listOf(
-        Category("Daily",   "데일리",  Color.parseColor("#5B8DEF")),
-        Category("Weekly",  "위클리",  Color.parseColor("#6DB56D")),
-        Category("Monthly", "먼슬리",  Color.parseColor("#C878C8")),
-        Category("Event",   "이벤트",  Color.parseColor("#E8924A"))
+        Category("Daily",   "데일리",  Color.parseColor("#2F81F7")),
+        Category("Weekly",  "위클리",  Color.parseColor("#3FB950")),
+        Category("Monthly", "먼슬리",  Color.parseColor("#A371F7")),
+        Category("Event",   "이벤트",  Color.parseColor("#F0883E"))
     )
 
     override fun onCreate() {
@@ -137,7 +137,7 @@ class GameOverlayService : AccessibilityService() {
             val tvEmpty = TextView(this).apply {
                 text = "태스크를 추가해 주세요"
                 textSize = 12f
-                setTextColor(Color.parseColor("#888888"))
+                setTextColor(Color.parseColor("#8B949E"))
                 gravity = Gravity.CENTER
                 setPadding((12 * dp).toInt(), (16 * dp).toInt(), (12 * dp).toInt(), (16 * dp).toInt())
             }
@@ -152,7 +152,7 @@ class GameOverlayService : AccessibilityService() {
             if (tasks.isNullOrEmpty()) continue
 
             if (!firstSection) {
-                val divider = View(this).apply { setBackgroundColor(Color.parseColor("#33FFFFFF")) }
+                val divider = View(this).apply { setBackgroundColor(Color.parseColor("#30363D")) }
                 val divParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, 1
                 ).apply { setMargins(0, (4 * dp).toInt(), 0, (4 * dp).toInt()) }
@@ -245,7 +245,7 @@ class GameOverlayService : AccessibilityService() {
         val tab = TextView(this).apply {
             text = "▶"
             textSize = 16f
-            setTextColor(Color.parseColor("#7EA8FF"))
+            setTextColor(Color.parseColor("#58A6FF"))
             gravity = Gravity.CENTER
             val dp = resources.displayMetrics.density
             setPadding((8 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt())
@@ -308,12 +308,12 @@ class GameOverlayService : AccessibilityService() {
                         val inZone = isInDeleteZone(event.rawY)
                         (deleteZoneView as? TextView)?.apply {
                             setTextColor(
-                                if (inZone) Color.parseColor("#FF4444")
-                                else Color.WHITE
+                                if (inZone) Color.parseColor("#F85149")
+                                else Color.parseColor("#F0F6FC")
                             )
                             (background as? GradientDrawable)?.setColor(
-                                if (inZone) Color.parseColor("#CC880000")
-                                else Color.parseColor("#CC333333")
+                                if (inZone) Color.parseColor("#CC3B1319")
+                                else Color.parseColor("#CC161B22")
                             )
                         }
                     } else {
@@ -483,9 +483,9 @@ class GameOverlayService : AccessibilityService() {
                         view.translationY = dy.coerceAtLeast(0f)
                         val inZone = isInDeleteZone(ev.rawY)
                         (deleteZoneView as? TextView)?.apply {
-                            setTextColor(if (inZone) Color.parseColor("#FF4444") else Color.WHITE)
+                            setTextColor(if (inZone) Color.parseColor("#F85149") else Color.parseColor("#F0F6FC"))
                             (background as? GradientDrawable)?.setColor(
-                                if (inZone) Color.parseColor("#CC880000") else Color.parseColor("#CC333333")
+                                if (inZone) Color.parseColor("#CC3B1319") else Color.parseColor("#CC161B22")
                             )
                         }
                     }
@@ -523,13 +523,13 @@ class GameOverlayService : AccessibilityService() {
         val dz = TextView(this).apply {
             text = "× 삭제"
             textSize = 14f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#F0F6FC"))
             gravity = Gravity.CENTER
             setPadding((28 * dp).toInt(), (14 * dp).toInt(), (28 * dp).toInt(), (14 * dp).toInt())
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 40 * dp
-                setColor(Color.parseColor("#CC333333"))
+                setColor(Color.parseColor("#CC161B22"))
             }
             setOnClickListener {
                 hideDeleteZone()
@@ -590,7 +590,7 @@ class GameOverlayService : AccessibilityService() {
 
     private fun applyCheckStyle(tvCheck: TextView, isDone: Boolean) {
         tvCheck.text = if (isDone) "✓" else "○"
-        tvCheck.setTextColor(if (isDone) Color.parseColor("#66D96E") else Color.parseColor("#666688"))
+        tvCheck.setTextColor(if (isDone) Color.parseColor("#3FB950") else Color.parseColor("#8B949E"))
     }
 
     override fun onInterrupt() { hideAll() }
