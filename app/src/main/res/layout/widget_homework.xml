@@ -12,18 +12,37 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="#FF161B22"
-        android:paddingStart="14dp"
+        android:paddingStart="6dp"
         android:paddingEnd="8dp">
 
         <TextView
-            android:id="@+id/tvWidgetTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="데일리 체크"
-            android:textColor="#F0F6FC"
-            android:textSize="15sp"
+            android:id="@+id/tvTabDaily"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="데일리"
+            android:textSize="14sp"
             android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvTabWeekly"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="위클리"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/vHeaderSpacer"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
 
         <TextView
             android:id="@+id/tvPageInfo"
@@ -51,6 +70,15 @@
             android:textColor="#58A6FF"
             android:textSize="22sp"/>
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvEmptyHint"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center"
+        android:textSize="13sp"
+        android:textColor="#8B949E"
+        android:visibility="gone"/>
 
     <!-- 앱 행 1~9: 고정 높이 유지 -->
     <LinearLayout android:id="@+id/row1"

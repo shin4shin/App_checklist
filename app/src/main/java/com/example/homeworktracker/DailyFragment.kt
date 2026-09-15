@@ -237,7 +237,8 @@ class DailyFragment : Fragment() {
                 view.findViewById<FloatingActionButton>(R.id.fabAddApp)
                     .visibility = if (isSelecting) View.GONE else View.VISIBLE
             },
-            onTaskClick = { app -> showTaskDialog(app) }
+            onTaskClick = { app -> showTaskDialog(app) },
+            category = category
         )
         recyclerView.layoutManager = LinearLayoutManager(ctx)
         recyclerView.adapter = adapter

@@ -97,4 +97,121 @@
 
     </LinearLayout>
 
+    <!-- 요일 선택 (Weekly 전용, 코드에서 visibility 제어) -->
+    <LinearLayout
+        android:id="@+id/layoutDayPicker"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="20dp"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#30363D"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="초기화 요일"
+            android:textSize="14sp"
+            android:textColor="#8B949E"
+            android:layout_marginBottom="12dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:weightSum="7">
+
+            <CheckBox
+                android:id="@+id/cbSun"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="일"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbMon"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="월"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbTue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="화"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbWed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="수"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbThu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="목"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbFri"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="금"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+            <CheckBox
+                android:id="@+id/cbSat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="토"
+                android:gravity="center"
+                android:button="@null"
+                android:background="@null"
+                android:textSize="13sp"
+                android:padding="6dp"/>
+
+        </LinearLayout>
+    </LinearLayout>
+
 </LinearLayout>

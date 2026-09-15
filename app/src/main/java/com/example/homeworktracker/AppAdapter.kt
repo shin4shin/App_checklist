@@ -16,7 +16,8 @@ class AppAdapter(
     private val onRemove: (AppInfo) -> Unit,
     private val onSave: () -> Unit,
     private val onSelectionChanged: (Boolean) -> Unit,
-    private val onTaskClick: (AppInfo) -> Unit = {}
+    private val onTaskClick: (AppInfo) -> Unit = {},
+    private val category: String = "Daily"
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -25,6 +26,7 @@ class AppAdapter(
     }
 
     val pendingChanges = mutableMapOf<String, Pair<Int, Int>>()
+    val pendingDays = mutableMapOf<String, Set<Int>>()
 
     // 선택 모드
     var isSelectionMode = false
@@ -96,9 +98,13 @@ class AppAdapter(
                 val (h, m) = getSavedResetTime(app.packageName)
                 if (h >= 0) Pair(h, m) else null
             }
-            holder.tvResetTime.text = if (displayTime != null)
-                String.format("%02d:%02d", displayTime.first, displayTime.second)
-            else "미설정"
+            val displayDays = if (category == "Weekly") {
+                pendingDays[app.packageName] ?: getSavedResetDays(app.packageName)
+            } else null
+            holder.tvResetTime.text = if (displayTime != null) {
+                val dayPrefix = if (displayDays != null && displayDays.isNotEmpty()) getDaysLabel(displayDays) + " " else ""
+                "$dayPrefix${String.format("%02d:%02d", displayTime.first, displayTime.second)}"
+            } else "미설정"
             holder.tvResetTime.setTextColor(
                 if (pendingChanges.containsKey(app.packageName))
                     android.graphics.Color.parseColor("#FFA000")
@@ -202,13 +208,50 @@ class AppAdapter(
             }
         })
 
+        // Weekly 카테고리일 때 요일 선택 영역 표시
+        val layoutDayPicker = dialogView.findViewById<android.view.View>(R.id.layoutDayPicker)
+        val checkBoxes = listOf(
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbSun),
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbMon),
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbTue),
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbWed),
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbThu),
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbFri),
+            dialogView.findViewById<android.widget.CheckBox>(R.id.cbSat)
+        )
+        val calDays = intArrayOf(1, 2, 3, 4, 5, 6, 7)
+
+        if (category == "Weekly") {
+            layoutDayPicker.visibility = View.VISIBLE
+            val savedDays = pendingDays[pkg] ?: getSavedResetDays(pkg)
+            checkBoxes.forEachIndexed { i, cb ->
+                cb.isChecked = calDays[i] in savedDays
+                cb.setTextColor(android.graphics.Color.parseColor(
+                    if (cb.isChecked) "#2F81F7" else "#8B949E"
+                ))
+                cb.setOnCheckedChangeListener { _, checked ->
+                    cb.setTextColor(android.graphics.Color.parseColor(
+                        if (checked) "#2F81F7" else "#8B949E"
+                    ))
+                }
+            }
+        }
+
         android.app.AlertDialog.Builder(context)
             .setView(dialogView)
             .setPositiveButton("확인") { _, _ ->
                 val hour = etHour.text.toString().toIntOrNull()?.coerceIn(0, 23) ?: spinnerHour.selectedItemPosition
                 val minute = etMinute.text.toString().toIntOrNull()?.coerceIn(0, 59) ?: spinnerMinute.selectedItemPosition
                 pendingChanges[pkg] = Pair(hour, minute)
-                tvResetTime?.text = String.format("%02d:%02d", hour, minute)
+                val timeStr = String.format("%02d:%02d", hour, minute)
+                if (category == "Weekly") {
+                    val selectedDays = calDays.filterIndexed { i, _ -> checkBoxes[i].isChecked }.toSet()
+                    pendingDays[pkg] = selectedDays
+                    val dayPrefix = if (selectedDays.isNotEmpty()) getDaysLabel(selectedDays) + " " else ""
+                    tvResetTime?.text = "$dayPrefix$timeStr"
+                } else {
+                    tvResetTime?.text = timeStr
+                }
                 tvResetTime?.setTextColor(android.graphics.Color.parseColor("#FFA000"))
                 notifyDataSetChanged()
             }
@@ -264,15 +307,21 @@ class AppAdapter(
     fun commitChanges() {
         for ((pkg, time) in pendingChanges) {
             saveResetTime(pkg, time.first, time.second)
-            if (isDone(pkg)) HomeworkWidget.scheduleResetIfNeeded(context, pkg)
+            HomeworkWidget.scheduleResetIfNeeded(context, pkg, category)
+        }
+        for ((pkg, days) in pendingDays) {
+            saveResetDays(pkg, days)
+            HomeworkWidget.scheduleResetIfNeeded(context, pkg, category)
         }
         pendingChanges.clear()
+        pendingDays.clear()
         applySortMode()
         notifyDataSetChanged()
     }
 
     fun discardChanges() {
         pendingChanges.clear()
+        pendingDays.clear()
         notifyDataSetChanged()
     }
 
@@ -292,13 +341,30 @@ class AppAdapter(
     private fun saveResetTime(packageName: String, hour: Int, minute: Int) {
         context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
             .edit()
-            .putInt("${packageName}_hour", hour)
-            .putInt("${packageName}_minute", minute)
+            .putInt("${packageName}_${category}_hour", hour)
+            .putInt("${packageName}_${category}_minute", minute)
             .apply()
     }
 
     fun getSavedResetTime(packageName: String): Pair<Int, Int> {
         val prefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
-        return Pair(prefs.getInt("${packageName}_hour", -1), prefs.getInt("${packageName}_minute", 0))
+        return Pair(prefs.getInt("${packageName}_${category}_hour", -1), prefs.getInt("${packageName}_${category}_minute", 0))
+    }
+
+    fun getSavedResetDays(packageName: String): Set<Int> {
+        val str = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
+            .getString("${packageName}_${category}_days", "") ?: ""
+        return if (str.isEmpty()) emptySet()
+        else str.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+    }
+
+    private fun saveResetDays(packageName: String, days: Set<Int>) {
+        context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
+            .edit().putString("${packageName}_${category}_days", days.joinToString(",")).apply()
+    }
+
+    private fun getDaysLabel(days: Set<Int>): String {
+        val map = mapOf(1 to "일", 2 to "월", 3 to "화", 4 to "수", 5 to "목", 6 to "금", 7 to "토")
+        return days.sorted().mapNotNull { map[it] }.joinToString("")
     }
 }

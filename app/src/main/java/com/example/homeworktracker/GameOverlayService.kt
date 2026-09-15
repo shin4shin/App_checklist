@@ -25,6 +25,25 @@ import kotlin.math.abs
 
 class GameOverlayService : AccessibilityService() {
 
+    companion object {
+        private var instance: GameOverlayService? = null
+
+        // 이 시간 이상 게임을 떠나 있었으면 새 세션으로 보고 삭제 상태를 해제
+        private const val SESSION_GAP_MS = 5 * 60 * 1000L
+
+        // ResetReceiver에서 호출 — 해당 pkg 오버레이가 표시 중이면 즉시 재빌드
+        fun refreshIfShowing(pkg: String) {
+            val svc = instance ?: return
+            if (svc.currentPkg == pkg) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    if (svc.currentPkg == pkg && !svc.isMinimized && svc.overlayView != null) {
+                        svc.showOverlay(pkg)
+                    }
+                }
+            }
+        }
+    }
+
     private var overlayView: View? = null
     private var tabView: View? = null
     private var revealOverlayView: View? = null
@@ -32,14 +51,18 @@ class GameOverlayService : AccessibilityService() {
     private var windowManager: WindowManager? = null
     private var currentPkg: String? = null
     private var savedY = -1
+    private var savedX = 0  // 0 = 왼쪽 엣지
     private var isMinimized = false
     private var currentAlpha = 0.9f
-    private var userDismissed = false  // 사용자가 직접 닫은 경우 재생성 억제
+    private var dismissedPkg: String? = null  // 사용자가 직접 삭제한 게임 (이번 세션 동안 재생성 억제)
     private var deleteZoneView: View? = null
     private var headerLongPressRunnable: Runnable? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingHideRunnable: Runnable? = null
+    private var currentPkgStartTime = 0L  // 현재 게임 포그라운드 진입 시각
+    private var lastSystemUiEventTime = 0L  // 마지막 SystemUI 이벤트 시각 (알림바 감지용)
+    private var awayStartTime = 0L  // 게임을 떠난 시각 (0 = 떠나지 않음)
 
     private val overlayWidthPx get() = (220 * resources.displayMetrics.density).toInt()
 
@@ -53,9 +76,11 @@ class GameOverlayService : AccessibilityService() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        savedY = getSharedPreferences("app_prefs", MODE_PRIVATE)
-            .getInt("overlay_tab_y", resources.displayMetrics.heightPixels / 3)
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        savedY = prefs.getInt("overlay_tab_y", resources.displayMetrics.heightPixels / 3)
+        savedX = prefs.getInt("overlay_tab_x", 0)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -68,21 +93,47 @@ class GameOverlayService : AccessibilityService() {
 
         if (pkg in registeredApps) {
             cancelPendingHide()
+            val now = android.os.SystemClock.elapsedRealtime()
+
+            // 삭제했던 게임으로 돌아온 경우: 떠나 있던 시간이 길면 새 세션으로 간주
+            if (pkg == dismissedPkg && awayStartTime != 0L && now - awayStartTime > SESSION_GAP_MS) {
+                dismissedPkg = null
+            }
+            awayStartTime = 0L
+
+            if (pkg == dismissedPkg) {
+                // 이번 세션 동안은 재생성하지 않음 (진입 시각만 갱신)
+                if (pkg != currentPkg) {
+                    currentPkg = pkg
+                    currentPkgStartTime = now
+                }
+                return
+            }
+
             if (pkg != currentPkg) {
-                // 다른 등록 앱으로 전환 → 직접 닫기 상태 초기화 후 새로 표시
-                userDismissed = false
                 isMinimized = false
                 currentPkg = pkg
+                currentPkgStartTime = now
                 showOverlay(pkg)
-            } else if (!userDismissed && overlayView == null && tabView == null) {
-                // 같은 앱이 다시 포그라운드 + 사용자가 직접 닫지 않은 경우만 재생성
+            } else if (overlayView == null && tabView == null) {
+                // 같은 앱이 다시 포그라운드 → 마지막 상태로 재생성
                 if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
             }
         } else {
-            if (currentPkg != null && (!isSystemUiPackage(pkg) || isHomeLauncherPackage(pkg))) {
-                // 게임을 나갔으면 직접 닫기 상태 초기화 (다음에 돌아오면 다시 표시)
-                userDismissed = false
-                schedulePendingHide()
+            // SystemUI 이벤트(알림바 등) 시각 기록
+            if (pkg.contains("systemui", ignoreCase = true)) {
+                lastSystemUiEventTime = android.os.SystemClock.elapsedRealtime()
+            }
+            // 홈 화면으로 나간 경우에만 숨김
+            // 예외 1: 게임 진입 직후 2초 이내 → 런처 백그라운드 이벤트 무시
+            // 예외 2: 3초 이내에 SystemUI 이벤트가 있었음 → 알림바 조작으로 판단, 무시
+            if (currentPkg != null && isHomeLauncherPackage(pkg)) {
+                val inGameDuration = android.os.SystemClock.elapsedRealtime() - currentPkgStartTime
+                val timeSinceSystemUi = android.os.SystemClock.elapsedRealtime() - lastSystemUiEventTime
+                if (inGameDuration > 2000 && timeSinceSystemUi > 3000) {
+                    if (awayStartTime == 0L) awayStartTime = android.os.SystemClock.elapsedRealtime()
+                    schedulePendingHide()
+                }
             }
         }
     }
@@ -111,9 +162,13 @@ class GameOverlayService : AccessibilityService() {
             } else false
         }
 
-        windowManager?.addView(view, params)
-        overlayView = view
-        attachHeaderDrag(view, pkg)
+        try {
+            windowManager?.addView(view, params)
+            overlayView = view
+            attachHeaderDrag(view, pkg)
+        } catch (e: Exception) {
+            android.util.Log.e("GameOverlay", "showOverlay addView 실패: ${e.message}")
+        }
     }
 
     // ─── 오버레이 뷰 생성 (WindowManager 미등록) ────────────────────────
@@ -193,7 +248,7 @@ class GameOverlayService : AccessibilityService() {
                     val nowDone = !isTaskDone(pkg, categoryKey, index)
                     setTaskDone(pkg, categoryKey, index, nowDone)
                     applyCheckStyle(tvCheck, nowDone)
-                    if (categoryKey == "Daily") syncWidgetDone(pkg)
+                    syncWidgetDone(pkg, categoryKey)
                 }
                 container.addView(row)
             }
@@ -241,17 +296,33 @@ class GameOverlayService : AccessibilityService() {
             try { windowManager?.removeView(it) } catch (e: Exception) { }
             overlayView = null
         }
+        revealOverlayView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            revealOverlayView = null
+            revealParams = null
+        }
+        // 이미 탭이 존재하면 먼저 제거 (중복 방지)
+        tabView?.let {
+            try { windowManager?.removeView(it) } catch (e: Exception) { }
+            tabView = null
+        }
+
+        val screenW = resources.displayMetrics.widthPixels
+        val dp = resources.displayMetrics.density
+        val isOnLeft = savedX < screenW / 2
 
         val tab = TextView(this).apply {
-            text = "▶"
+            text = if (isOnLeft) "▶" else "◀"
             textSize = 16f
             setTextColor(Color.parseColor("#58A6FF"))
             gravity = Gravity.CENTER
-            val dp = resources.displayMetrics.density
-            setPadding((8 * dp).toInt(), (22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt())
+            setPadding(0, (22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt())
             background = ContextCompat.getDrawable(this@GameOverlayService, R.drawable.bg_overlay_tab)
             alpha = currentAlpha
         }
+
+        val screenH = resources.displayMetrics.heightPixels
+        val clampedY = savedY.coerceIn(0, screenH - (120 * dp).toInt())
 
         val tabParams = makeOverlayParams().apply {
             width  = WindowManager.LayoutParams.WRAP_CONTENT
@@ -260,29 +331,26 @@ class GameOverlayService : AccessibilityService() {
             flags = flags or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
-            x = 0
-            y = savedY
+            x = savedX
+            y = clampedY
         }
 
         var touchStartX = 0f
         var touchStartY = 0f
-        var initTabY  = 0
-        var dragDir   = 0    // 0=미결정, 1=세로, 2=가로(오버레이 당김)
-        var hasDragged = false
-        var isLongPressMode = false
-        val dp = resources.displayMetrics.density
+        var initTabX = 0
+        var initTabY = 0
+        var isDragging = false
+        var isSliding = false
+        var longPressTriggered = false
 
         val dismissAction = {
-            userDismissed = true
+            dismissedPkg = pkg
             isMinimized = false
             hideAll()
         }
+
         val longPressRunnable = Runnable {
-            isLongPressMode = true
+            longPressTriggered = true
             showDeleteZone(dismissAction)
         }
 
@@ -291,91 +359,108 @@ class GameOverlayService : AccessibilityService() {
                 MotionEvent.ACTION_DOWN -> {
                     touchStartX = event.rawX
                     touchStartY = event.rawY
-                    initTabY   = tabParams.y
-                    dragDir    = 0
-                    hasDragged = false
-                    isLongPressMode = false
+                    initTabX = tabParams.x
+                    initTabY = tabParams.y
+                    isDragging = false
+                    isSliding = false
+                    longPressTriggered = false
                     handler.postDelayed(longPressRunnable, 450)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - touchStartX
                     val dy = event.rawY - touchStartY
-                    if (isLongPressMode) {
-                        // 롱프레스 모드: 탭을 자유롭게 끌 수 있고 삭제 존 하이라이트
+                    val adx = abs(dx)
+                    val ady = abs(dy)
+
+                    if (longPressTriggered && !isDragging) {
+                        isDragging = true
+                    }
+
+                    if (!isDragging && !isSliding && (adx > 20 * dp || ady > 20 * dp)) {
+                        handler.removeCallbacks(longPressRunnable)
+                        if (adx > ady) {
+                            isSliding = true
+                            prepareRevealOverlay(pkg)
+                        } else {
+                            isDragging = true
+                            showDeleteZone(dismissAction)
+                        }
+                    }
+
+                    if (isDragging) {
+                        tabParams.x = (initTabX + dx.toInt())
                         tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
-                        windowManager?.updateViewLayout(tab, tabParams)
+                        try { windowManager?.updateViewLayout(tab, tabParams) } catch (e: Exception) {}
                         val inZone = isInDeleteZone(event.rawY)
                         (deleteZoneView as? TextView)?.apply {
-                            setTextColor(
-                                if (inZone) Color.parseColor("#F85149")
-                                else Color.parseColor("#F0F6FC")
-                            )
+                            setTextColor(if (inZone) Color.parseColor("#F85149") else Color.parseColor("#F0F6FC"))
                             (background as? GradientDrawable)?.setColor(
-                                if (inZone) Color.parseColor("#CC3B1319")
-                                else Color.parseColor("#CC161B22")
+                                if (inZone) Color.parseColor("#CC3B1319") else Color.parseColor("#CC161B22")
                             )
-                        }
-                    } else {
-                        if (abs(dx) > 10 * dp || abs(dy) > 10 * dp) {
-                            handler.removeCallbacks(longPressRunnable)
-                        }
-                        if (dragDir == 0) {
-                            val adx = abs(dx)
-                            val ady = abs(dy)
-                            val minH = 24 * dp
-                            when {
-                                adx > ady * 2.5f && adx > minH -> {
-                                    hasDragged = true
-                                    dragDir = 2
-                                    prepareRevealOverlay(pkg)
-                                    completeReveal(pkg, tab, tabParams)
-                                }
-                                ady > adx -> {
-                                    hasDragged = ady > 8
-                                    if (hasDragged) dragDir = 1
-                                }
-                            }
-                        }
-                        if (dragDir == 1) {
-                            tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
-                            savedY = tabParams.y
-                            getSharedPreferences("app_prefs", MODE_PRIVATE)
-                                .edit().putInt("overlay_tab_y", savedY).apply()
-                            windowManager?.updateViewLayout(tab, tabParams)
                         }
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
                     handler.removeCallbacks(longPressRunnable)
-                    if (isLongPressMode) {
-                        isLongPressMode = false
-                        if (isInDeleteZone(event.rawY)) {
-                            hideDeleteZone()
-                            dismissAction()
-                        } else {
-                            // 삭제 존 밖에서 놓으면 탭 위치 저장 후 유지
-                            savedY = tabParams.y
+                    when {
+                        isDragging -> {
+                            isDragging = false
+                            if (isInDeleteZone(event.rawY)) {
+                                hideDeleteZone()
+                                dismissAction()
+                            } else {
+                                val sw = resources.displayMetrics.widthPixels
+                                val snapX = if (tabParams.x < sw / 2) 0 else sw
+                                tabParams.x = snapX
+                                savedX = snapX
+                                savedY = tabParams.y
+                                tab.text = if (snapX == 0) "▶" else "◀"
+                                getSharedPreferences("app_prefs", MODE_PRIVATE).edit()
+                                    .putInt("overlay_tab_x", savedX)
+                                    .putInt("overlay_tab_y", savedY)
+                                    .apply()
+                                try { windowManager?.updateViewLayout(tab, tabParams) } catch (e: Exception) {}
+                                hideDeleteZone()
+                            }
+                        }
+                        isSliding -> {
+                            isSliding = false
+                            completeReveal(pkg, tab, tabParams)
+                        }
+                        longPressTriggered -> {
                             hideDeleteZone()
                         }
-                    } else if (!hasDragged) {
-                        expandFromTab(pkg)
+                        else -> {
+                            expandFromTab(pkg)
+                        }
                     }
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     handler.removeCallbacks(longPressRunnable)
-                    isLongPressMode = false
+                    isDragging = false
+                    isSliding = false
+                    longPressTriggered = false
                     hideDeleteZone()
+                    revealOverlayView?.let {
+                        try { windowManager?.removeView(it) } catch (e: Exception) {}
+                        revealOverlayView = null
+                        revealParams = null
+                    }
                     false
                 }
                 else -> false
             }
         }
 
-        windowManager?.addView(tab, tabParams)
-        tabView = tab
+        try {
+            windowManager?.addView(tab, tabParams)
+            tabView = tab
+        } catch (e: Exception) {
+            android.util.Log.e("GameOverlay", "minimizeToTab addView 실패: ${e.message}")
+        }
     }
 
     // ─── 드래그 중 오버레이 미리 생성 (translationX로 화면 밖에 숨김) ──
@@ -445,8 +530,11 @@ class GameOverlayService : AccessibilityService() {
 
     private fun schedulePendingHide() {
         cancelPendingHide()
-        pendingHideRunnable = Runnable { hideAll() }.also {
-            handler.postDelayed(it, 500)
+        pendingHideRunnable = Runnable {
+            currentPkg = null  // 다음 이벤트에서 재진입으로 인식되도록 초기화
+            hideAll()
+        }.also {
+            handler.postDelayed(it, 5000)
         }
     }
 
@@ -458,7 +546,7 @@ class GameOverlayService : AccessibilityService() {
     private fun attachHeaderDrag(view: View, pkg: String) {
         val header = view.findViewById<View>(R.id.overlayHeader) ?: return
         val dp = resources.displayMetrics.density
-        val dismissAction = { userDismissed = true; isMinimized = false; hideAll() }
+        val dismissAction = { dismissedPkg = pkg; isMinimized = false; hideAll() }
         val longPressRunnable = Runnable { showDeleteZone(dismissAction) }
         headerLongPressRunnable = longPressRunnable
         var dragMode = false
@@ -604,6 +692,15 @@ class GameOverlayService : AccessibilityService() {
         return info?.activityInfo?.packageName == pkg
     }
 
+    // 앱 서랍(CATEGORY_LAUNCHER)에 아이콘이 있는 사용자 앱인지 확인
+    // 삼성 게임 툴바·오버레이 등은 런처 아이콘이 없으므로 false
+    private fun hasLauncherIcon(pkg: String): Boolean {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+            .addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+            .setPackage(pkg)
+        return packageManager.queryIntentActivities(intent, 0).isNotEmpty()
+    }
+
     private fun isSystemUiPackage(pkg: String): Boolean {
         if (pkg.contains("systemui", ignoreCase = true)) return true
         return try {
@@ -638,12 +735,12 @@ class GameOverlayService : AccessibilityService() {
         } catch (e: Exception) { emptyMap() }
     }
 
-    private fun syncWidgetDone(pkg: String) {
-        val dailyTasks = loadTasksByCategory(pkg)["Daily"] ?: return
-        if (dailyTasks.isEmpty()) return
-        val allDone = dailyTasks.indices.all { i -> isTaskDone(pkg, "Daily", i) }
+    private fun syncWidgetDone(pkg: String, category: String) {
+        val tasks = loadTasksByCategory(pkg)[category] ?: return
+        if (tasks.isEmpty()) return
+        val allDone = tasks.indices.all { i -> isTaskDone(pkg, category, i) }
         getSharedPreferences("done_status", MODE_PRIVATE)
-            .edit().putBoolean(pkg, allDone).apply()
+            .edit().putBoolean(HomeworkWidget.doneKey(pkg, category), allDone).apply()
         HomeworkWidget.updateAllWidgets(this)
         MiniWidget.updateAllWidgets(this)
         SmallWidget.updateAllWidgets(this)
