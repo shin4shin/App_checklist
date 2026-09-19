@@ -27,6 +27,28 @@ class AppAdapter(
 
     val pendingChanges = mutableMapOf<String, Pair<Int, Int>>()
     val pendingDays = mutableMapOf<String, Set<Int>>()
+    private val draftPrefs = context.getSharedPreferences("reset_drafts", Context.MODE_PRIVATE)
+
+    init {
+        val draft = org.json.JSONObject(draftPrefs.getString(category, "{}")!!)
+        val valid = TaskRepository(context).packages(category)
+        for (pkg in draft.keys()) {
+            if (pkg !in valid || category == "Event") continue
+            val value = draft.getJSONObject(pkg)
+            pendingChanges[pkg] = value.getInt("hour") to value.getInt("minute")
+            if (value.has("days")) pendingDays[pkg] = value.getString("days").split(",").mapNotNull { it.toIntOrNull() }.toSet()
+        }
+    }
+
+    fun persistDraft() {
+        val draft = org.json.JSONObject()
+        for ((pkg, time) in pendingChanges) {
+            val value = org.json.JSONObject().put("hour", time.first).put("minute", time.second)
+            pendingDays[pkg]?.let { value.put("days", it.joinToString(",")) }
+            draft.put(pkg, value)
+        }
+        draftPrefs.edit().putString(category, draft.toString()).apply()
+    }
 
     // 선택 모드
     var isSelectionMode = false
@@ -79,6 +101,7 @@ class AppAdapter(
         } else {
             // 일반 모드
             holder.btnSet.visibility = View.VISIBLE
+            holder.btnSet.text = "시간 설정"
             val isDone = isDone(app.packageName)
             holder.tvCheck.visibility = if (isDone) View.VISIBLE else View.INVISIBLE
             holder.tvCheck.text = "✓"
@@ -105,13 +128,14 @@ class AppAdapter(
                 val dayPrefix = if (displayDays != null && displayDays.isNotEmpty()) getDaysLabel(displayDays) + " " else ""
                 "$dayPrefix${String.format("%02d:%02d", displayTime.first, displayTime.second)}"
             } else "미설정"
+            if (category == "Event") holder.tvResetTime.text = EventDeadline.label(context, app.packageName)
             holder.tvResetTime.setTextColor(
                 if (pendingChanges.containsKey(app.packageName))
                     android.graphics.Color.parseColor("#FFA000")
                 else android.graphics.Color.parseColor("#888888")
             )
 
-            holder.btnSet.setOnClickListener { showTimePicker(app.packageName, holder.tvResetTime) }
+            holder.btnSet.setOnClickListener { if (category == "Event") onTaskClick(app) else showTimePicker(app.packageName) }
             holder.itemView.setOnClickListener { onTaskClick(app) }
             holder.itemView.setOnLongClickListener { onRemove(app); true }
         }
@@ -144,6 +168,8 @@ class AppAdapter(
     private fun applySortMode() {
         if (sortMode == SORT_NAME) {
             appList.sortBy { it.name }
+        } else if (category == "Event") {
+            appList.sortBy { EventDeadline.get(context, it.packageName).takeIf { time -> time > 0 } ?: Long.MAX_VALUE }
         } else {
             appList.sortWith(Comparator { a, b ->
                 val (ah, am) = getSavedResetTime(a.packageName)
@@ -157,164 +183,68 @@ class AppAdapter(
 
     fun refreshSort() = applySortMode()
 
-    // ─── 시간 선택 다이얼로그 ────────────────────────────────────────
-    fun showTimePicker(pkg: String, tvResetTime: TextView? = null) {
-        val inflater = LayoutInflater.from(context)
-        val dialogView = inflater.inflate(R.layout.dialog_time_picker, null)
-
-        val etHour = dialogView.findViewById<android.widget.EditText>(R.id.etHour)
-        val etMinute = dialogView.findViewById<android.widget.EditText>(R.id.etMinute)
-        val spinnerHour = dialogView.findViewById<android.widget.Spinner>(R.id.spinnerHour)
-        val spinnerMinute = dialogView.findViewById<android.widget.Spinner>(R.id.spinnerMinute)
-
-        spinnerHour.adapter = android.widget.ArrayAdapter(context,
-            android.R.layout.simple_spinner_dropdown_item,
-            (0..23).map { String.format("%02d시", it) })
-        spinnerMinute.adapter = android.widget.ArrayAdapter(context,
-            android.R.layout.simple_spinner_dropdown_item,
-            (0..59).map { String.format("%02d분", it) })
-
-        val initTime = pendingChanges[pkg] ?: run {
-            val (h, m) = getSavedResetTime(pkg)
-            if (h >= 0) Pair(h, m) else Pair(0, 0)
+    fun showTimePicker(pkg: String) {
+        if (category == "Event") {
+            showEventEditor(listOf(pkg), appList.firstOrNull { it.packageName == pkg }?.name ?: pkg)
+            return
         }
-        etHour.setText(String.format("%02d", initTime.first))
-        etMinute.setText(String.format("%02d", initTime.second))
-        spinnerHour.setSelection(initTime.first)
-        spinnerMinute.setSelection(initTime.second)
-
-        spinnerHour.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: android.widget.AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) { etHour.setText(String.format("%02d", pos)) }
-            override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
-        }
-        spinnerMinute.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: android.widget.AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) { etMinute.setText(String.format("%02d", pos)) }
-            override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
-        }
-        etHour.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                val h = s.toString().toIntOrNull() ?: return
-                if (h in 0..23) spinnerHour.setSelection(h)
-            }
-        })
-        etMinute.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                val m = s.toString().toIntOrNull() ?: return
-                if (m in 0..59) spinnerMinute.setSelection(m)
-            }
-        })
-
-        // Weekly 카테고리일 때 요일 선택 영역 표시
-        val layoutDayPicker = dialogView.findViewById<android.view.View>(R.id.layoutDayPicker)
-        val checkBoxes = listOf(
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbSun),
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbMon),
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbTue),
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbWed),
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbThu),
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbFri),
-            dialogView.findViewById<android.widget.CheckBox>(R.id.cbSat)
-        )
-        val calDays = intArrayOf(1, 2, 3, 4, 5, 6, 7)
-
-        if (category == "Weekly") {
-            layoutDayPicker.visibility = View.VISIBLE
-            val savedDays = pendingDays[pkg] ?: getSavedResetDays(pkg)
-            checkBoxes.forEachIndexed { i, cb ->
-                cb.isChecked = calDays[i] in savedDays
-                cb.setTextColor(android.graphics.Color.parseColor(
-                    if (cb.isChecked) "#2F81F7" else "#8B949E"
-                ))
-                cb.setOnCheckedChangeListener { _, checked ->
-                    cb.setTextColor(android.graphics.Color.parseColor(
-                        if (checked) "#2F81F7" else "#8B949E"
-                    ))
-                }
-            }
-        }
-
-        android.app.AlertDialog.Builder(context)
-            .setView(dialogView)
-            .setPositiveButton("확인") { _, _ ->
-                val hour = etHour.text.toString().toIntOrNull()?.coerceIn(0, 23) ?: spinnerHour.selectedItemPosition
-                val minute = etMinute.text.toString().toIntOrNull()?.coerceIn(0, 59) ?: spinnerMinute.selectedItemPosition
-                pendingChanges[pkg] = Pair(hour, minute)
-                val timeStr = String.format("%02d:%02d", hour, minute)
-                if (category == "Weekly") {
-                    val selectedDays = calDays.filterIndexed { i, _ -> checkBoxes[i].isChecked }.toSet()
-                    pendingDays[pkg] = selectedDays
-                    val dayPrefix = if (selectedDays.isNotEmpty()) getDaysLabel(selectedDays) + " " else ""
-                    tvResetTime?.text = "$dayPrefix$timeStr"
-                } else {
-                    tvResetTime?.text = timeStr
-                }
-                tvResetTime?.setTextColor(android.graphics.Color.parseColor("#FFA000"))
-                notifyDataSetChanged()
-            }
-            .setNegativeButton("취소", null)
-            .show()
+        showResetEditor(listOf(pkg), appList.firstOrNull { it.packageName == pkg }?.name ?: pkg)
     }
 
-    // 단체 시간 설정
     fun showBulkTimePicker() {
         if (selectedPackages.isEmpty()) return
-        // 첫 번째 선택 앱 pkg로 다이얼로그 띄우되, 확인 시 선택된 모든 앱에 적용
-        val inflater = LayoutInflater.from(context)
-        val dialogView = inflater.inflate(R.layout.dialog_time_picker, null)
-        val etHour = dialogView.findViewById<android.widget.EditText>(R.id.etHour)
-        val etMinute = dialogView.findViewById<android.widget.EditText>(R.id.etMinute)
-        val spinnerHour = dialogView.findViewById<android.widget.Spinner>(R.id.spinnerHour)
-        val spinnerMinute = dialogView.findViewById<android.widget.Spinner>(R.id.spinnerMinute)
-
-        spinnerHour.adapter = android.widget.ArrayAdapter(context,
-            android.R.layout.simple_spinner_dropdown_item,
-            (0..23).map { String.format("%02d시", it) })
-        spinnerMinute.adapter = android.widget.ArrayAdapter(context,
-            android.R.layout.simple_spinner_dropdown_item,
-            (0..59).map { String.format("%02d분", it) })
-
-        etHour.setText("00"); etMinute.setText("00")
-
-        spinnerHour.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: android.widget.AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) { etHour.setText(String.format("%02d", pos)) }
-            override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
+        val packages = selectedPackages.toList().sorted()
+        if (category == "Event") {
+            showEventEditor(packages, "선택한 앱 ${packages.size}개에 같은 마감을 설정합니다.")
+            return
         }
-        spinnerMinute.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: android.widget.AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) { etMinute.setText(String.format("%02d", pos)) }
-            override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
-        }
+        showResetEditor(packages, context.getString(R.string.reset_bulk_target, packages.size))
+    }
 
-        android.app.AlertDialog.Builder(context)
-            .setTitle("선택한 앱 시간 설정 (${selectedPackages.size}개)")
-            .setView(dialogView)
-            .setPositiveButton("확인") { _, _ ->
-                val hour = etHour.text.toString().toIntOrNull()?.coerceIn(0, 23) ?: spinnerHour.selectedItemPosition
-                val minute = etMinute.text.toString().toIntOrNull()?.coerceIn(0, 59) ?: spinnerMinute.selectedItemPosition
-                for (pkg in selectedPackages) {
-                    pendingChanges[pkg] = Pair(hour, minute)
-                }
-                notifyDataSetChanged()
+    private fun showEventEditor(packages: List<String>, target: String) {
+        EventDeadlineDialog.show(context, "$target · 모든 이벤트에 적용", EventDeadline.get(context, packages.first())) { duration ->
+            EventDeadline.save(context, packages, duration)
+            refreshSort()
+            notifyDataSetChanged()
+        }
+    }
+
+    private fun showResetEditor(packages: List<String>, target: String) {
+        val first = packages.first()
+        val initial = pendingChanges[first] ?: getSavedResetTime(first).let { if (it.first >= 0) it else 0 to 0 }
+        ResetTimeDialog.show(context, category, target, initial.first, initial.second,
+            pendingDays[first] ?: getSavedResetDays(first)) { hour, minute, days ->
+            val valid = TaskRepository(context).packages(category)
+            for (pkg in packages) {
+                if (pkg !in valid) continue
+                saveResetTime(pkg, hour, minute)
+                if (category == "Weekly") saveResetDays(pkg, days)
+                ResetScheduler.schedule(context, pkg, category)
+                pendingChanges.remove(pkg)
+                pendingDays.remove(pkg)
             }
-            .setNegativeButton("취소", null)
-            .show()
+            persistDraft()
+            applySortMode()
+            notifyDataSetChanged()
+            HomeworkWidget.updateAllWidgets(context)
+            MiniWidget.updateAllWidgets(context)
+            SmallWidget.updateAllWidgets(context)
+            android.widget.Toast.makeText(context, R.string.reset_saved, android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     // ─── 실제 저장 ───────────────────────────────────────────────────
     fun commitChanges() {
+        val valid = TaskRepository(context).packages(category)
         for ((pkg, time) in pendingChanges) {
+            if (pkg !in valid || category == "Event") continue
             saveResetTime(pkg, time.first, time.second)
-            HomeworkWidget.scheduleResetIfNeeded(context, pkg, category)
-        }
-        for ((pkg, days) in pendingDays) {
-            saveResetDays(pkg, days)
-            HomeworkWidget.scheduleResetIfNeeded(context, pkg, category)
+            if (category == "Weekly") saveResetDays(pkg, pendingDays[pkg] ?: getSavedResetDays(pkg))
+            ResetScheduler.schedule(context, pkg, category)
         }
         pendingChanges.clear()
         pendingDays.clear()
+        persistDraft()
         applySortMode()
         notifyDataSetChanged()
     }
@@ -322,20 +252,13 @@ class AppAdapter(
     fun discardChanges() {
         pendingChanges.clear()
         pendingDays.clear()
+        persistDraft()
         notifyDataSetChanged()
     }
 
-    fun hasChanges() = pendingChanges.isNotEmpty()
+    fun hasChanges() = pendingChanges.isNotEmpty() || pendingDays.isNotEmpty()
 
-    // ─── 완료 여부 ────────────────────────────────────────────────────
-    fun setDone(packageName: String, done: Boolean) {
-        context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-            .edit().putBoolean(packageName, done).apply()
-    }
-
-    private fun isDone(packageName: String) =
-        context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-            .getBoolean(packageName, false)
+    private fun isDone(packageName: String) = TaskRepository(context).isDone(packageName, category)
 
     // ─── SharedPreferences ───────────────────────────────────────────
     private fun saveResetTime(packageName: String, hour: Int, minute: Int) {
@@ -354,8 +277,8 @@ class AppAdapter(
     fun getSavedResetDays(packageName: String): Set<Int> {
         val str = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
             .getString("${packageName}_${category}_days", "") ?: ""
-        return if (str.isEmpty()) emptySet()
-        else str.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+        return str.split(",").mapNotNull { it.trim().toIntOrNull() }.filter { it in 1..7 }
+            .toSet().ifEmpty { setOf(java.util.Calendar.MONDAY) }
     }
 
     private fun saveResetDays(packageName: String, days: Set<Int>) {

@@ -19,9 +19,18 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        TaskRepository(this)
+        ResetScheduler.restore(this)
+        currentNavId = savedInstanceState?.getInt("current_nav", R.id.nav_home)
+            ?: navForCategory(intent.getStringExtra("category"))
+
+        val navigation = findViewById<BottomNavigationView>(R.id.bottomNav)
+        navigation.selectedItemId = currentNavId
+
         if (savedInstanceState == null) {
-            showFragment(R.id.nav_home)
-            checkPermissionsOnStart()
+            showFragment(currentNavId)
+            if (intent.action == "com.example.homeworktracker.HOMEWORK_DONE") showDonePicker()
+            else checkPermissionsOnStart()
         }
 
         findViewById<BottomNavigationView>(R.id.bottomNav).setOnItemSelectedListener { item ->
@@ -29,6 +38,38 @@ class HomeActivity : AppCompatActivity() {
             showFragment(item.itemId)
             true
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = navForCategory(intent.getStringExtra("category"))
+        if (intent.action == "com.example.homeworktracker.HOMEWORK_DONE") showDonePicker()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt("current_nav", currentNavId)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun navForCategory(category: String?) = when (category) {
+        "Daily" -> R.id.nav_daily
+        "Weekly" -> R.id.nav_weekly
+        "Event" -> R.id.nav_monthly
+        else -> R.id.nav_home
+    }
+
+    private fun showDonePicker() {
+        val repository = TaskRepository(this)
+        val apps = repository.packages("Daily").mapNotNull { pkg ->
+            try { pkg to packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }
+            catch (_: android.content.pm.PackageManager.NameNotFoundException) { null }
+        }.sortedBy { it.second }
+        if (apps.isEmpty()) return
+        AlertDialog.Builder(this).setTitle("어떤 앱 숙제를 완료했나요?")
+            .setItems(apps.map { it.second }.toTypedArray()) { _, which ->
+                repository.setDone(apps[which].first, "Daily", true)
+            }.setNegativeButton("취소", null).show()
     }
 
     private fun checkPermissionsOnStart() {
@@ -79,6 +120,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun showFragment(navId: Int) {
+        (supportFragmentManager.findFragmentById(R.id.fragmentContainer) as? DailyFragment)?.persistDraft()
         val fragment: Fragment = when (navId) {
             R.id.nav_home     -> HomeFragment()
             R.id.nav_daily    -> DailyFragment.newInstance("Daily")

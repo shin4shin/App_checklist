@@ -47,6 +47,18 @@ class DailyFragment : Fragment() {
 
     private lateinit var adapter: AppAdapter
     private val appList = mutableListOf<AppInfo>()
+    private val deadlineHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val deadlineRefresh = object : Runnable {
+        override fun run() {
+            if (isResumed && ::adapter.isInitialized) {
+                adapter.notifyDataSetChanged()
+                deadlineHandler.postDelayed(this, 30_000)
+            }
+        }
+    }
+    private val stateListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        if (isResumed && ::adapter.isInitialized) adapter.notifyDataSetChanged()
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -54,6 +66,10 @@ class DailyFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        toolbar.title = when (category) { "Weekly" -> "위클리 설정"; "Event" -> "이벤트 설정"; else -> "데일리 설정" }
+        toolbar.setLogo(when (category) { "Weekly" -> R.drawable.ic_nav_weekly; "Event" -> R.drawable.ic_nav_monthly; else -> R.drawable.ic_nav_daily })
+        toolbar.logoDescription = toolbar.title
         setupRecyclerView(view)
         setupFab(view)
         setupMenu(view)
@@ -64,10 +80,38 @@ class DailyFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (::adapter.isInitialized) adapter.notifyDataSetChanged()
+        if (category == "Event") deadlineHandler.postDelayed(deadlineRefresh, 30_000)
+        requireContext().getSharedPreferences(TaskRepository.STORE, Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(stateListener)
+        if (::adapter.isInitialized) refreshAppList()
+    }
+
+    override fun onPause() {
+        deadlineHandler.removeCallbacks(deadlineRefresh)
+        requireContext().getSharedPreferences(TaskRepository.STORE, Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(stateListener)
+        persistDraft()
+        super.onPause()
+    }
+
+    fun persistDraft() {
+        if (::adapter.isInitialized) adapter.persistDraft()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (::adapter.isInitialized) adapter.persistDraft()
+        super.onSaveInstanceState(outState)
     }
 
     private fun setupSaveButton(view: View) {
+        fun updateSaveVisibility() {
+            view.findViewById<Button>(R.id.btnSave).visibility =
+                if (adapter.hasChanges() && !adapter.isSelectionMode) View.VISIBLE else View.GONE
+        }
+        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() = updateSaveVisibility()
+        })
+        updateSaveVisibility()
         view.findViewById<Button>(R.id.btnSave).setOnClickListener {
             if (adapter.hasChanges()) saveAll()
             else Toast.makeText(requireContext(), "변경된 내용이 없습니다", Toast.LENGTH_SHORT).show()
@@ -155,7 +199,6 @@ class DailyFragment : Fragment() {
             .setMessage("${app.name}을(를) 목록에서 삭제할까요?")
             .setPositiveButton("삭제") { _, _ ->
                 deleteAddedApp(app.packageName)
-                cancelReset(app.packageName)
                 refreshAppList()
             }
             .setNegativeButton("취소", null)
@@ -203,7 +246,7 @@ class DailyFragment : Fragment() {
             AlertDialog.Builder(requireContext())
                 .setMessage("선택한 앱 ${selected.size}개를 삭제할까요?")
                 .setPositiveButton("삭제") { _, _ ->
-                    for (pkg in selected) { deleteAddedApp(pkg); cancelReset(pkg) }
+                    for (pkg in selected) { deleteAddedApp(pkg) }
                     adapter.exitSelectionMode()
                     bar.visibility = View.GONE
                     refreshAppList()
@@ -211,6 +254,7 @@ class DailyFragment : Fragment() {
                 .setNegativeButton("취소", null)
                 .show()
         }
+        view.findViewById<Button>(R.id.btnSelectionSetTime).text = "시간 설정"
         view.findViewById<Button>(R.id.btnSelectionSetTime).setOnClickListener {
             if (adapter.selectedPackages.isEmpty()) { Toast.makeText(requireContext(), "선택된 앱이 없습니다", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
             adapter.showBulkTimePicker()
@@ -233,7 +277,7 @@ class DailyFragment : Fragment() {
             onSave = { saveAll() },
             onSelectionChanged = { isSelecting ->
                 bar.visibility = if (isSelecting) View.VISIBLE else View.GONE
-                btnSave.visibility = if (isSelecting) View.GONE else View.VISIBLE
+                btnSave.visibility = if (!isSelecting && adapter.hasChanges()) View.VISIBLE else View.GONE
                 view.findViewById<FloatingActionButton>(R.id.fabAddApp)
                     .visibility = if (isSelecting) View.GONE else View.VISIBLE
             },
@@ -272,59 +316,16 @@ class DailyFragment : Fragment() {
         }
     }
 
-    fun scheduleReset(targetPackage: String, hour: Int, minute: Int = 0) {
-        val ctx = requireContext()
-        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute)
-            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= Calendar.getInstance().timeInMillis) add(Calendar.DATE, 1)
-        }
-        val intent = Intent(ctx, ResetReceiver::class.java).apply { putExtra("target_package", targetPackage) }
-        val pendingIntent = PendingIntent.getBroadcast(
-            ctx, targetPackage.hashCode(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms())
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-            else
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        } else {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        }
-    }
-
-    fun cancelReset(targetPackage: String) {
-        val ctx = requireContext()
-        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(ctx, ResetReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            ctx, targetPackage.hashCode(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.cancel(pendingIntent)
-    }
-
-    private fun saveAddedApp(pkg: String) {
-        val ctx = requireContext()
-        val prefs = ctx.getSharedPreferences("added_apps", Context.MODE_PRIVATE)
-        val set = prefs.getStringSet("apps", mutableSetOf())!!.toMutableSet()
-        set.add(pkg); prefs.edit().putStringSet("apps", set).apply()
-        if (ctx.getSharedPreferences("app_tasks", Context.MODE_PRIVATE).getString(pkg, null) == null) {
-            saveTasksByCategory(pkg, mutableMapOf("Daily" to mutableListOf("일일 퀘스트")))
-        }
-    }
+    private fun saveAddedApp(pkg: String) = TaskRepository(requireContext()).addApp(pkg, category)
 
     private fun deleteAddedApp(pkg: String) {
-        val prefs = requireContext().getSharedPreferences("added_apps", Context.MODE_PRIVATE)
-        val set = prefs.getStringSet("apps", mutableSetOf())!!.toMutableSet()
-        set.remove(pkg); prefs.edit().putStringSet("apps", set).apply()
+        adapter.pendingChanges.remove(pkg)
+        adapter.pendingDays.remove(pkg)
+        adapter.persistDraft()
+        TaskRepository(requireContext()).removeApp(pkg, category)
     }
 
-    fun getAddedAppPackages(): Set<String> =
-        requireContext().getSharedPreferences("added_apps", Context.MODE_PRIVATE)
-            .getStringSet("apps", emptySet()) ?: emptySet()
+    fun getAddedAppPackages(): Set<String> = TaskRepository(requireContext()).packages(category)
 
     private fun getAllInstalledApps(): List<AppInfo> {
         val pm = requireContext().packageManager
@@ -356,16 +357,36 @@ class DailyFragment : Fragment() {
         val etNewTask = dialogView.findViewById<EditText>(R.id.etNewTask)
         val btnAdd    = dialogView.findViewById<Button>(R.id.btnAddTask)
         val rvTasks   = dialogView.findViewById<RecyclerView>(R.id.rvTasks)
-        val allTasks  = loadTasksByCategory(app.packageName)
-        val currentTasks = (allTasks[category] ?: emptyList()).toMutableList()
+        val repository = TaskRepository(ctx)
+        val currentTasks = repository.tasks(app.packageName, category).toMutableList()
         val taskAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             override fun getItemCount() = currentTasks.size
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
                 object : RecyclerView.ViewHolder(layoutInflater.inflate(R.layout.item_task_edit, parent, false)) {}
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                holder.itemView.findViewById<TextView>(R.id.tvTaskItem).text = currentTasks[position]
+                val task = currentTasks[position]
+                holder.itemView.findViewById<TextView>(R.id.tvTaskItem).text = task.title
+                holder.itemView.findViewById<TextView>(R.id.tvTaskDeadline).apply {
+                    visibility = if (category == "Event") View.VISIBLE else View.GONE
+                    text = EventDeadline.label(task.deadline)
+                }
+                holder.itemView.findViewById<TextView>(R.id.btnTaskDeadline).apply {
+                    visibility = if (category == "Event") View.VISIBLE else View.GONE
+                    contentDescription = "${task.title} 시간 설정"
+                    setOnClickListener {
+                        EventDeadlineDialog.show(ctx, "${app.name} · ${task.title}\n목록에서 저장을 누르면 적용됩니다.", task.deadline) { duration ->
+                            val index = currentTasks.indexOfFirst { it.id == task.id }
+                            if (index >= 0) {
+                                currentTasks[index] = currentTasks[index].copy(deadline = duration?.let {
+                                    EventDeadline.calculate(System.currentTimeMillis(), it)
+                                } ?: 0L)
+                                notifyItemChanged(index)
+                            }
+                        }
+                    }
+                }
                 holder.itemView.findViewById<TextView>(R.id.btnDeleteTask).setOnClickListener {
-                    val pos = holder.adapterPosition
+                    val pos = holder.bindingAdapterPosition
                     if (pos != RecyclerView.NO_POSITION) { currentTasks.removeAt(pos); notifyItemRemoved(pos) }
                 }
             }
@@ -374,45 +395,22 @@ class DailyFragment : Fragment() {
         rvTasks.adapter = taskAdapter
         btnAdd.setOnClickListener {
             val text = etNewTask.text.toString().trim()
-            if (text.isNotEmpty()) { currentTasks.add(text); taskAdapter.notifyItemInserted(currentTasks.size - 1); etNewTask.text.clear() }
+            if (text.isNotEmpty()) { currentTasks.add(TaskItem(title = text)); taskAdapter.notifyItemInserted(currentTasks.size - 1); etNewTask.text.clear() }
         }
         AlertDialog.Builder(ctx)
             .setTitle("${app.name} - 할 일 목록")
             .setView(dialogView)
             .setPositiveButton("저장") { _, _ ->
-                val taskMap = allTasks.toMutableMap().apply { put(category, currentTasks) }
-                saveTasksByCategory(app.packageName, taskMap.mapValues { it.value.toMutableList() }.toMutableMap())
+                repository.saveTasks(app.packageName, category, currentTasks)
+                adapter.notifyDataSetChanged()
+            }
+            .setNeutralButton(if (repository.isDone(app.packageName, category)) "완료 취소" else "전체 완료") { _, _ ->
+                val done = !repository.isDone(app.packageName, category)
+                repository.saveTasks(app.packageName, category, currentTasks)
+                repository.setDone(app.packageName, category, done)
             }
             .setNegativeButton("취소", null)
             .show()
-    }
-
-    private fun loadTasksByCategory(pkg: String): Map<String, List<String>> {
-        val json = requireContext().getSharedPreferences("app_tasks", Context.MODE_PRIVATE).getString(pkg, "{}") ?: "{}"
-        return try {
-            if (json.trim().startsWith("[")) {
-                val arr = JSONArray(json)
-                val list = (0 until arr.length()).map { arr.getString(it) }
-                if (list.isEmpty()) emptyMap() else mapOf("Daily" to list)
-            } else {
-                val obj = JSONObject(json)
-                val result = mutableMapOf<String, List<String>>()
-                for (key in obj.keys()) {
-                    val arr = obj.getJSONArray(key)
-                    result[key] = (0 until arr.length()).map { arr.getString(it) }
-                }
-                result
-            }
-        } catch (e: Exception) { emptyMap() }
-    }
-
-    private fun saveTasksByCategory(pkg: String, taskMap: Map<String, MutableList<String>>) {
-        val obj = JSONObject()
-        for ((category, tasks) in taskMap) {
-            if (tasks.isNotEmpty()) obj.put(category, JSONArray(tasks))
-        }
-        requireContext().getSharedPreferences("app_tasks", Context.MODE_PRIVATE)
-            .edit().putString(pkg, obj.toString()).apply()
     }
 
     private fun showOverlaySetupDialog() {

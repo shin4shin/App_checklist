@@ -51,22 +51,8 @@ class HomeworkWidget : AppWidgetProvider() {
         fun doneKey(pkg: String, category: String): String =
             if (category == "Daily") pkg else "${pkg}_${category}_done"
 
-        fun tasksOf(context: Context, pkg: String, category: String): List<String> {
-            val json = context.getSharedPreferences("app_tasks", Context.MODE_PRIVATE)
-                .getString(pkg, "{}") ?: "{}"
-            return try {
-                val arr = if (json.trim().startsWith("[")) {
-                    // 구버전 flat 배열 형식 — Daily로 취급
-                    if (category != "Daily") return emptyList()
-                    JSONArray(json)
-                } else {
-                    val obj = JSONObject(json)
-                    if (!obj.has(category)) return emptyList()
-                    obj.getJSONArray(category)
-                }
-                (0 until arr.length()).map { arr.getString(it) }
-            } catch (e: Exception) { emptyList() }
-        }
+        fun tasksOf(context: Context, pkg: String, category: String): List<String> =
+            TaskRepository(context).tasks(pkg, category).map { it.title }
 
         fun updateAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -78,9 +64,8 @@ class HomeworkWidget : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_homework)
 
             val category = getTab(context, appWidgetId)
-            val prefs = context.getSharedPreferences("added_apps", Context.MODE_PRIVATE)
-            val packages = prefs.getStringSet("apps", emptySet()) ?: emptySet()
-            val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
+            val repository = TaskRepository(context)
+            val packages = repository.packages(category)
             val pm = context.packageManager
 
             val sortMode = context.getSharedPreferences("sort_prefs", Context.MODE_PRIVATE)
@@ -88,8 +73,9 @@ class HomeworkWidget : AppWidgetProvider() {
             val resetPrefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
 
             val appInfos = packages.filter { pkg ->
-                // 데일리 탭은 전체, 그 외 탭은 해당 카테고리 태스크가 있는 앱만
-                category == "Daily" || tasksOf(context, pkg, category).isNotEmpty()
+                category != "Weekly" ||
+                    (resetPrefs.getInt("${pkg}_Weekly_hour", -1) in 0..23 &&
+                        resetPrefs.getInt("${pkg}_Weekly_minute", 0) in 0..59)
             }.mapNotNull { pkg ->
                 try {
                     val info = pm.getApplicationInfo(pkg, 0)
@@ -97,6 +83,7 @@ class HomeworkWidget : AppWidgetProvider() {
                 } catch (e: Exception) { null }
             }.let { list ->
                 if (sortMode == 0) list.sortedBy { it.first }
+                else if (category == "Event") list.sortedBy { EventDeadline.get(context, it.second).takeIf { time -> time > 0 } ?: Long.MAX_VALUE }
                 else list.sortedWith(Comparator { a, b ->
                     val ah = resetPrefs.getInt("${a.second}_${category}_hour", -1)
                     val am = resetPrefs.getInt("${a.second}_${category}_minute", 0)
@@ -117,22 +104,27 @@ class HomeworkWidget : AppWidgetProvider() {
 
             applyTab(context, views, appWidgetId, R.id.tvTabDaily, "Daily", category, appWidgetId * 10 + 3)
             applyTab(context, views, appWidgetId, R.id.tvTabWeekly, "Weekly", category, appWidgetId * 10 + 4)
+            applyTab(context, views, appWidgetId, R.id.tvTabEvent, "Event", category, appWidgetId * 10 + 5)
 
             if (appInfos.isEmpty()) {
                 views.setViewVisibility(R.id.tvEmptyHint, android.view.View.VISIBLE)
                 views.setTextViewText(R.id.tvEmptyHint,
-                    if (category == "Daily") "등록된 앱이 없습니다"
-                    else "위클리 태스크가 설정된 앱이 없습니다")
+                    when (category) {
+                        "Weekly" -> "초기화 시간이 설정된 앱이 없습니다"
+                        "Event" -> "이벤트에 등록된 앱이 없습니다"
+                        else -> "데일리에 등록된 앱이 없습니다"
+                    })
             } else {
                 views.setViewVisibility(R.id.tvEmptyHint, android.view.View.GONE)
             }
 
             val launchPending = PendingIntent.getActivity(
                 context, appWidgetId,
-                Intent(context, MainActivity::class.java),
+                Intent(context, HomeActivity::class.java).putExtra("category", category),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.vHeaderSpacer, launchPending)
+            views.setOnClickPendingIntent(R.id.tvPageInfo, launchPending)
 
             val nextIntent = Intent(context, HomeworkWidget::class.java).apply {
                 action = ACTION_NEXT_PAGE
@@ -168,10 +160,12 @@ class HomeworkWidget : AppWidgetProvider() {
 
                 if (appIndex < appInfos.size) {
                     val (name, pkg, icon) = appInfos[appIndex]
-                    val isDone = donePrefs.getBoolean(doneKey(pkg, category), false)
+                    val isDone = repository.isDone(pkg, category)
 
                     views.setViewVisibility(rowId, android.view.View.VISIBLE)
-                    views.setTextViewText(nameId, name)
+                    val expired = category == "Event" && EventDeadline.allExpired(context, pkg)
+                    views.setTextViewText(nameId, if (expired) "$name · 마감" else name)
+                    views.setContentDescription(nameId, if (category == "Event") "$name, ${EventDeadline.label(context, pkg)}" else name)
                     views.setTextViewText(checkId, if (isDone) "✓" else "○")
                     views.setTextColor(checkId,
                         if (isDone) android.graphics.Color.parseColor("#3FB950")
@@ -248,98 +242,6 @@ class HomeworkWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
         }
 
-        // ─── 알람 예약 ────────────────────────────────────────────────
-        // category가 null이면 Daily + Weekly 모두 예약
-        fun scheduleResetIfNeeded(context: Context, pkg: String, category: String? = null) {
-            val cats = if (category != null) listOf(category) else listOf("Daily", "Weekly")
-            for (cat in cats) {
-                scheduleForCategory(context, pkg, cat)
-            }
-        }
-
-        private fun scheduleForCategory(context: Context, pkg: String, category: String) {
-            val resetPrefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
-            val hour = resetPrefs.getInt("${pkg}_${category}_hour", -1)
-            val minute = resetPrefs.getInt("${pkg}_${category}_minute", 0)
-            if (hour < 0) return
-
-            val daysStr = resetPrefs.getString("${pkg}_${category}_days", "") ?: ""
-            val configuredDays = if (daysStr.isEmpty()) emptySet()
-            else daysStr.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
-
-            val now = Calendar.getInstance()
-            val calendar = if (configuredDays.isNotEmpty()) {
-                var found: Calendar? = null
-                for (offset in 0..6) {
-                    val candidate = Calendar.getInstance().apply {
-                        add(Calendar.DATE, offset)
-                        set(Calendar.HOUR_OF_DAY, hour)
-                        set(Calendar.MINUTE, minute)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }
-                    if (candidate.timeInMillis > now.timeInMillis &&
-                        candidate.get(Calendar.DAY_OF_WEEK) in configuredDays) {
-                        found = candidate
-                        break
-                    }
-                }
-                found ?: Calendar.getInstance().apply {
-                    add(Calendar.DATE, 7)
-                    set(Calendar.HOUR_OF_DAY, hour)
-                    set(Calendar.MINUTE, minute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-            } else {
-                Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, hour)
-                    set(Calendar.MINUTE, minute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                    if (timeInMillis <= now.timeInMillis) {
-                        add(Calendar.DATE, 1)
-                    }
-                }
-            }
-
-            val requestCode = "${pkg}_${category}".hashCode()
-            val intent = Intent(context, ResetReceiver::class.java).apply {
-                putExtra("target_package", pkg)
-                putExtra("target_category", category)
-            }
-            val pendingIntent = PendingIntent.getBroadcast(
-                context, requestCode, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-                } else {
-                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-                }
-            } else {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-            }
-        }
-
-        // ─── 알람 취소 ───────────────────────────────────────────────
-        fun cancelReset(context: Context, pkg: String, category: String? = null) {
-            val cats = if (category != null) listOf(category) else listOf("Daily", "Weekly")
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            for (cat in cats) {
-                val requestCode = "${pkg}_${cat}".hashCode()
-                val intent = Intent(context, ResetReceiver::class.java)
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context, requestCode, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                alarmManager.cancel(pendingIntent)
-            }
-        }
-
         private fun drawableToBitmap(drawable: Drawable): Bitmap {
             val bitmap = Bitmap.createBitmap(
                 drawable.intrinsicWidth.takeIf { it > 0 } ?: 64,
@@ -360,12 +262,8 @@ class HomeworkWidget : AppWidgetProvider() {
             ACTION_TOGGLE_DONE -> {
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: return
                 val category = intent.getStringExtra(EXTRA_CATEGORY) ?: "Daily"
-                val key = doneKey(pkg, category)
-                val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-                donePrefs.edit().putBoolean(key, !donePrefs.getBoolean(key, false)).apply()
-                updateAllWidgets(context)
-                MiniWidget.updateAllWidgets(context)
-                SmallWidget.updateAllWidgets(context)
+                val repository = TaskRepository(context)
+                repository.setDone(pkg, category, !repository.isDone(pkg, category))
             }
             ACTION_SELECT_TAB -> {
                 val id = intent.getIntExtra(EXTRA_WIDGET_ID, -1)

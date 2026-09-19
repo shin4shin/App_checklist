@@ -17,32 +17,46 @@
 
         <TextView
             android:id="@+id/tvTabDaily"
-            android:layout_width="wrap_content"
-            android:layout_height="30dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
             android:gravity="center"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
             android:text="데일리"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold"/>
 
         <TextView
             android:id="@+id/tvTabWeekly"
-            android:layout_width="wrap_content"
-            android:layout_height="30dp"
-            android:layout_marginStart="4dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:layout_marginStart="0dp"
             android:gravity="center"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
             android:text="위클리"
-            android:textSize="14sp"
+            android:textSize="13sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvTabEvent"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:layout_marginStart="0dp"
+            android:gravity="center"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:text="이벤트"
+            android:textSize="13sp"
             android:textStyle="bold"/>
 
         <TextView
             android:id="@+id/vHeaderSpacer"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"/>
+            android:layout_width="4dp"
+            android:layout_height="match_parent"/>
 
         <TextView
             android:id="@+id/tvPageInfo"

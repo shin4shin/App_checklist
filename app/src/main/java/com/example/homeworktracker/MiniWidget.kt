@@ -37,9 +37,8 @@ class MiniWidget : AppWidgetProvider() {
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.widget_mini)
 
-            val prefs = context.getSharedPreferences("added_apps", Context.MODE_PRIVATE)
-            val packages = prefs.getStringSet("apps", emptySet()) ?: emptySet()
-            val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
+            val repository = TaskRepository(context)
+            val packages = repository.packages("Daily")
             val pm = context.packageManager
 
             val appInfos = packages.mapNotNull { pkg ->
@@ -59,7 +58,7 @@ class MiniWidget : AppWidgetProvider() {
                 R.id.tvMiniTitle,
                 PendingIntent.getActivity(
                     context, appWidgetId,
-                    Intent(context, MainActivity::class.java),
+                    Intent(context, HomeActivity::class.java).putExtra("category", "Daily"),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
             )
@@ -115,7 +114,7 @@ class MiniWidget : AppWidgetProvider() {
                 val appIndex = startIndex + index
                 if (appIndex < appInfos.size) {
                     val (_, pkg, icon) = appInfos[appIndex]
-                    val isDone = donePrefs.getBoolean(pkg, false)
+                    val isDone = repository.isDone(pkg, "Daily")
 
                     views.setViewVisibility(cellIds[index], android.view.View.VISIBLE)
                     try { views.setImageViewBitmap(iconIds[index], drawableToBitmap(icon)) } catch (e: Exception) { }
@@ -161,11 +160,8 @@ class MiniWidget : AppWidgetProvider() {
         when (intent.action) {
             ACTION_TOGGLE_DONE -> {
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: return
-                val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-                donePrefs.edit().putBoolean(pkg, !donePrefs.getBoolean(pkg, false)).apply()
-                updateAllWidgets(context)
-                HomeworkWidget.updateAllWidgets(context)
-                SmallWidget.updateAllWidgets(context)
+                val repository = TaskRepository(context)
+                repository.setDone(pkg, "Daily", !repository.isDone(pkg, "Daily"))
             }
             ACTION_NEXT_PAGE -> {
                 val id = intent.getIntExtra(EXTRA_WIDGET_ID, -1)

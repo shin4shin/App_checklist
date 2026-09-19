@@ -37,9 +37,8 @@ class SmallWidget : AppWidgetProvider() {
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             val views = RemoteViews(context.packageName, R.layout.widget_small)
 
-            val prefs = context.getSharedPreferences("added_apps", Context.MODE_PRIVATE)
-            val packages = prefs.getStringSet("apps", emptySet()) ?: emptySet()
-            val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
+            val repository = TaskRepository(context)
+            val packages = repository.packages("Daily")
             val pm = context.packageManager
 
             val appInfos = packages.mapNotNull { pkg ->
@@ -59,7 +58,7 @@ class SmallWidget : AppWidgetProvider() {
             // 타이틀 클릭 → 앱 실행
             views.setOnClickPendingIntent(R.id.tvSmallTitle,
                 PendingIntent.getActivity(context, appWidgetId,
-                    Intent(context, MainActivity::class.java),
+                    Intent(context, HomeActivity::class.java).putExtra("category", "Daily"),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
 
             // 페이지 버튼
@@ -95,7 +94,7 @@ class SmallWidget : AppWidgetProvider() {
 
                 if (appIndex < appInfos.size) {
                     val (name, pkg, icon) = appInfos[appIndex]
-                    val isDone = donePrefs.getBoolean(pkg, false)
+                    val isDone = repository.isDone(pkg, "Daily")
 
                     views.setViewVisibility(rowId, android.view.View.VISIBLE)
                     views.setTextViewText(nameId, name)
@@ -156,11 +155,8 @@ class SmallWidget : AppWidgetProvider() {
         when (intent.action) {
             ACTION_TOGGLE_DONE -> {
                 val pkg = intent.getStringExtra(EXTRA_PACKAGE) ?: return
-                val donePrefs = context.getSharedPreferences("done_status", Context.MODE_PRIVATE)
-                donePrefs.edit().putBoolean(pkg, !donePrefs.getBoolean(pkg, false)).apply()
-                updateAllWidgets(context)
-                HomeworkWidget.updateAllWidgets(context)
-                MiniWidget.updateAllWidgets(context)
+                val repository = TaskRepository(context)
+                repository.setDone(pkg, "Daily", !repository.isDone(pkg, "Daily"))
             }
             ACTION_NEXT_PAGE -> {
                 val id = intent.getIntExtra(EXTRA_WIDGET_ID, -1)

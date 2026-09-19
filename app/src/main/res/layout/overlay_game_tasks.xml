@@ -49,10 +49,11 @@
 
     <!-- 태스크 목록 -->
     <ScrollView
+        android:id="@+id/taskScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="320dp"
-        android:scrollbars="none"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="false"
         android:overScrollMode="never">
 
         <LinearLayout

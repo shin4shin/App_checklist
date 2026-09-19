@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="24dp">
+        <TextView android:id="@+id/eventDeadlineTarget" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="일" android:labelFor="@+id/eventDaysPicker"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+                <NumberPicker android:id="@id/eventDaysPicker" android:layout_width="match_parent"
+                    android:layout_height="180dp" android:contentDescription="마감까지 남은 일수" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="시간" android:labelFor="@+id/eventHoursPicker"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+                <NumberPicker android:id="@id/eventHoursPicker" android:layout_width="match_parent"
+                    android:layout_height="180dp" android:contentDescription="마감까지 남은 시간" />
+            </LinearLayout>
+        </LinearLayout>
+        <TextView android:id="@+id/eventDeadlinePreview" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" android:textColor="?attr/colorOnSurfaceVariant" />
+    </LinearLayout>
+</ScrollView>

@@ -15,7 +15,7 @@
         android:paddingStart="12dp"
         android:paddingEnd="6dp">
 
-        <View
+        <TextView
             android:layout_width="3dp"
             android:layout_height="18dp"
             android:background="#2F81F7"

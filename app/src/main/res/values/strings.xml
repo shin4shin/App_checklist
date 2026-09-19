@@ -3,4 +3,15 @@
     <string name="shortcut_short">숙제 완료</string>
     <string name="shortcut_long">숙제 완료 표시하기</string>
     <string name="accessibility_service_description">게임 앱 실행 시 할 일 목록 오버레이를 표시합니다.</string>
+    <string name="reset_daily_title">매일 초기화</string>
+    <string name="reset_weekly_title">주간 초기화</string>
+    <string name="reset_time_label">초기화 시간 · 24시간제</string>
+    <string name="reset_days_label">반복할 요일 · 여러 개 선택 가능</string>
+    <string name="reset_select_days">요일을 하나 이상 선택해 주세요.</string>
+    <string name="reset_daily_summary">매일 %1$s에 완료 표시가 초기화됩니다.</string>
+    <string name="reset_weekly_summary">매주 %1$s %2$s에 완료 표시가 초기화됩니다.</string>
+    <string name="reset_save">저장</string>
+    <string name="reset_cancel">취소</string>
+    <string name="reset_saved">초기화 설정을 저장했습니다</string>
+    <string name="reset_bulk_target">선택한 앱 %1$d개에 동일하게 적용합니다.</string>
 </resources>
