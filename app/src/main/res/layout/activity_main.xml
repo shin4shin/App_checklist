@@ -18,6 +18,7 @@
             android:paddingTop="36dp"
             android:background="?attr/colorSurfaceVariant"
             app:title="데일리 설정"
+            app:titleMarginStart="8dp"
             app:titleTextColor="?attr/colorOnSurface"
             app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
 

@@ -93,6 +93,17 @@ class GameOverlayService : AccessibilityService() {
         foregroundPackage()?.let { handleForegroundPackage(it) }
     }
 
+    private val retryForeground = Runnable {
+        foregroundPackage()?.let { handleForegroundPackage(it) }
+    }
+
+    private fun scheduleForegroundCheck() {
+        handler.removeCallbacks(checkForeground)
+        handler.removeCallbacks(retryForeground)
+        handler.postDelayed(checkForeground, 150L)
+        handler.postDelayed(retryForeground, 650L)
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         handler.post(checkForeground)
@@ -113,13 +124,13 @@ class GameOverlayService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                scheduleForegroundCheck()
                 val pkg = foregroundPackage() ?: event.packageName?.toString() ?: return
                 handleForegroundPackage(pkg)
             }
             AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
                 // Coalesce window bursts and let the new window's root become available.
-                handler.removeCallbacks(checkForeground)
-                handler.postDelayed(checkForeground, 150L)
+                scheduleForegroundCheck()
             }
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                 if (event.packageName?.toString() == packageName) return
@@ -644,8 +655,15 @@ class GameOverlayService : AccessibilityService() {
     private fun schedulePendingHide() {
         cancelPendingHide()
         pendingHideRunnable = Runnable {
-            currentPkg = null  // 다음 이벤트에서 재진입으로 인식되도록 초기화
-            hideAll()
+            pendingHideRunnable = null
+            val foreground = foregroundPackage()
+            if (foreground != null && foreground in TaskRepository(this).packages()) {
+                handleForegroundPackage(foreground)
+            } else if (foreground != null && isHomeLauncherPackage(foreground)) {
+                currentPkg = null
+                hideAll()
+            }
+            // A stale launcher event or an unavailable root must not hide a returning game's tab.
         }.also {
             handler.postDelayed(it, 5000)
         }
@@ -826,6 +844,7 @@ class GameOverlayService : AccessibilityService() {
     override fun onDestroy() {
         addTaskDialog?.dismiss()
         handler.removeCallbacks(checkForeground)
+        handler.removeCallbacks(retryForeground)
         cancelPendingHide()
         hideAll()
         if (instance === this) instance = null

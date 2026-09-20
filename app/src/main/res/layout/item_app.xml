@@ -33,24 +33,32 @@
         android:layout_marginStart="4dp"
         android:contentDescription="앱 아이콘" />
 
-    <!-- 앱 이름 — MD3 BodyLarge -->
-    <TextView
-        android:id="@+id/tvAppName"
+    <!-- Keep the name and schedule in one bounded column. -->
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-        android:layout_marginStart="12dp" />
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:orientation="vertical">
 
-    <!-- 초기화 시간 — MD3 LabelMedium / colorOnSurfaceVariant -->
-    <TextView
-        android:id="@+id/tvResetTime"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="미설정"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:layout_marginEnd="4dp" />
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+        <TextView
+            android:id="@+id/tvResetTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="미설정"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+    </LinearLayout>
 
     <!-- MD3 Text Button -->
     <com.google.android.material.button.MaterialButton
