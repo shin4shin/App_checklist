@@ -92,6 +92,21 @@
                 android:resource="@xml/small_widget_info" />
         </receiver>
 
+        <!-- 4x4 개인 계획 위젯 -->
+        <receiver android:name=".PersonalWidget"
+            android:label="@string/personal_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.homeworktracker.PERSONAL_TOGGLE_DONE" />
+                <action android:name="com.example.homeworktracker.PERSONAL_NEXT_PAGE" />
+                <action android:name="com.example.homeworktracker.PERSONAL_PREV_PAGE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/personal_widget_info" />
+        </receiver>
+
         <!-- 초기화 BroadcastReceiver -->
         <receiver android:name=".ResetReceiver"
             android:exported="false" />

@@ -2,7 +2,10 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
  android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="?attr/colorSurface">
  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
-  <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="36dp" android:text="오늘의 활동" android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" android:textColor="?attr/colorOnSurface" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="36dp" android:orientation="horizontal" android:gravity="center_vertical">
+   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="오늘의 체크" android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" android:textColor="?attr/colorOnSurface" />
+   <ImageButton android:id="@+id/homeModeSwitch" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_switch_mode" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="개인 계획 모드로 전환" app:tint="?attr/colorOnSurface" />
+  </LinearLayout>
   <TextView android:id="@+id/tvTodayDate" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="?attr/colorOnSurfaceVariant" />
   <com.google.android.material.tabs.TabLayout android:id="@+id/homeProgressTabs" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" app:tabMode="fixed" app:tabGravity="fill" app:tabTextColor="?attr/colorOnSurfaceVariant" app:tabSelectedTextColor="?attr/colorOnSurface" />
   <com.google.android.material.card.MaterialCardView android:id="@+id/homeProgressCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" app:cardCornerRadius="24dp" app:cardBackgroundColor="?attr/colorPrimaryContainer" app:strokeWidth="0dp">

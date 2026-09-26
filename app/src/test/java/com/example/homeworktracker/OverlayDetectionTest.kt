@@ -25,6 +25,42 @@ class OverlayDetectionTest {
         shadowOf(it).setRoot(AccessibilityNodeInfo.obtain().apply { packageName = pkg })
     }
 
+    @Test fun foregroundMonitorFindsLateGameWithoutSystemUiEvent() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        TaskRepository(service).addApp("game.late", "Daily")
+        GameOverlayService::class.java.getDeclaredMethod("onServiceConnected")
+            .apply { isAccessible = true }.invoke(service)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertNull(field(service, "tabView"))
+        shadowOf(service).setWindows(listOf(focusedWindow("game.late")))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        assertEquals("game.late", field(service, "currentPkg"))
+        assertNotNull(field(service, "tabView"))
+        controller.destroy()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertNull(field(service, "tabView"))
+    }
+
+    @Test fun stateEventWinsOverStaleWindowAndLeavingHidesTabImmediately() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        TaskRepository(service).addApp("game.transition", "Daily")
+        shadowOf(service).setWindows(listOf(focusedWindow("previous.app")))
+        service.onAccessibilityEvent(AccessibilityEvent.obtain(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+            .apply { packageName = "game.transition" })
+        assertNotNull(field(service, "tabView"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(700))
+        assertEquals("game.transition", field(service, "currentPkg"))
+        shadowOf(service).setWindows(listOf(focusedWindow("game.transition")))
+        service.onAccessibilityEvent(AccessibilityEvent.obtain(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+            .apply { packageName = service.packageName })
+        assertNull(field(service, "tabView"))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(700))
+        assertNull(field(service, "tabView"))
+        controller.destroy()
+    }
+
     @Test fun pendingHideDoesNotRemoveTabAfterReturningWithoutAnotherEvent() {
         val controller = Robolectric.buildService(GameOverlayService::class.java).create()
         val service = controller.get()

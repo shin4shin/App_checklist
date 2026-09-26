@@ -14,4 +14,5 @@
     <string name="reset_cancel">취소</string>
     <string name="reset_saved">초기화 설정을 저장했습니다</string>
     <string name="reset_bulk_target">선택한 앱 %1$d개에 동일하게 적용합니다.</string>
+    <string name="personal_widget_label">나의 계획</string>
 </resources>

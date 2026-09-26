@@ -1,0 +1,7 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+ <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="계획 제목">
+  <com.google.android.material.textfield.TextInputEditText android:id="@+id/personalPlanTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textCapSentences" android:maxLines="3" />
+ </com.google.android.material.textfield.TextInputLayout>
+ <TextView android:id="@+id/personalPlanDeadline" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:textColor="?attr/colorOnSurface" />
+ <com.google.android.material.button.MaterialButton android:id="@+id/personalPlanSetTime" style="@style/Widget.Material3.Button.OutlinedButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="시간 설정" />
+</LinearLayout>

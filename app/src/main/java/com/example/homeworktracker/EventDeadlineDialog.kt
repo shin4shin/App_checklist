@@ -14,6 +14,7 @@ object EventDeadlineDialog {
         target: String,
         currentDeadline: Long,
         windowType: Int? = null,
+        dialogTitle: String = "이벤트 시간 설정",
         onSave: (Long?) -> Unit
     ): AlertDialog {
         val builder = MaterialAlertDialogBuilder(context)
@@ -40,7 +41,7 @@ object EventDeadlineDialog {
         val preview = content.findViewById<TextView>(R.id.eventDeadlinePreview)
         val original = if (currentDeadline > 0) "현재 마감: ${EventDeadline.format(currentDeadline)}\n" else ""
         preview.text = original + "일·시간을 돌려 남은 기간을 선택하세요."
-        val dialog = builder.setTitle("이벤트 시간 설정").setView(content)
+        val dialog = builder.setTitle(dialogTitle).setView(content)
             .setNegativeButton("취소", null).setPositiveButton("저장", null)
             .apply { if (currentDeadline > 0) setNeutralButton("마감 해제") { _, _ -> onSave(null) } }.create()
         fun validate() {

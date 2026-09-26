@@ -88,7 +88,19 @@ class GameOverlayService : AccessibilityService() {
         savedX = prefs.getInt("overlay_tab_x", 0)
     }
 
+    private val windowPackages = mutableMapOf<Int, String>()
+    private var monitoringForeground = false
+    private val foregroundMonitor = object : Runnable {
+        override fun run() {
+            if (!monitoringForeground) return
+            val power = getSystemService(POWER_SERVICE) as android.os.PowerManager
+            if (power.isInteractive) foregroundPackage()?.let { handleForegroundPackage(it) }
+            handler.postDelayed(this, 1_000L)
+        }
+    }
     private var lastContentCheck = 0L
+    private var transitionPackage: String? = null
+    private var transitionUntil = 0L
     private val checkForeground = Runnable {
         foregroundPackage()?.let { handleForegroundPackage(it) }
     }
@@ -107,6 +119,9 @@ class GameOverlayService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         handler.post(checkForeground)
+        monitoringForeground = true
+        handler.removeCallbacks(foregroundMonitor)
+        handler.post(foregroundMonitor)
     }
 
     // Only inspect the package on the root; no text or descendant content is read.
@@ -116,17 +131,36 @@ class GameOverlayService : AccessibilityService() {
         }
         val foreground = appWindows.firstOrNull { it.isFocused }
             ?: appWindows.firstOrNull { it.isActive }
-        val root = if (foreground != null) foreground.root
-            else if (appWindows.isEmpty()) rootInActiveWindow else null
-        return root?.packageName?.toString()
+        val root = foreground?.root ?: rootInActiveWindow
+        val rootMatches = foreground == null || root?.windowId == foreground.id
+        val pkg = foreground?.root?.packageName?.toString()
+            ?: foreground?.let { windowPackages[it.id] }
+            ?: root?.takeIf { rootMatches }?.packageName?.toString()
+        // Window snapshots can still describe the previous activity during a transition.
+        if (android.os.SystemClock.elapsedRealtime() < transitionUntil && pkg != transitionPackage) return null
+        return pkg
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 scheduleForegroundCheck()
-                val pkg = foregroundPackage() ?: event.packageName?.toString() ?: return
-                handleForegroundPackage(pkg)
+                val eventPkg = event.packageName?.toString() ?: return
+                val eventWindow = windows.firstOrNull { it.id == event.windowId }
+                if (event.windowId >= 0 && (eventWindow == null ||
+                            eventWindow.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION)) {
+                    windowPackages[event.windowId] = eventPkg
+                }
+                if (eventWindow != null && (eventWindow.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION ||
+                            (!eventWindow.isActive && !eventWindow.isFocused))) return
+                // Our dialogs, keyboards and system panels are not app switches.
+                if (eventPkg == packageName && isDialogShowing) return
+                val isApp = eventPkg in TaskRepository(this).packages() || eventPkg == packageName ||
+                    isHomeLauncherPackage(eventPkg) || hasLauncherIcon(eventPkg)
+                if (!isApp) return
+                transitionPackage = eventPkg
+                transitionUntil = android.os.SystemClock.elapsedRealtime() + 1_000L
+                handleForegroundPackage(eventPkg)
             }
             AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
                 // Coalesce window bursts and let the new window's root become available.
@@ -144,7 +178,7 @@ class GameOverlayService : AccessibilityService() {
     }
 
     private fun handleForegroundPackage(pkg: String) {
-        if (pkg == packageName) return
+        if (pkg == packageName && isDialogShowing) return
 
         val registeredApps = TaskRepository(this).packages()
 
@@ -177,25 +211,12 @@ class GameOverlayService : AccessibilityService() {
                 if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
             }
         } else {
-            val now = android.os.SystemClock.elapsedRealtime()
-            if (pkg.contains("systemui", ignoreCase = true)) {
-                // 알림바 등 — 자리를 비운 것으로 보지 않는다
-                lastSystemUiEventTime = now
-            } else if (currentPkg != null && awayStartTime == 0L) {
-                // 게임을 떠난 시각 기록. 런처뿐 아니라 어떤 앱으로 전환하든 잡아야
-                // 삭제 상태가 만료되지 않고 영원히 남는 일이 없다.
-                awayStartTime = now
-            }
-            // 홈 화면으로 나간 경우에만 숨김
-            // 예외 1: 게임 진입 직후 2초 이내 → 런처 백그라운드 이벤트 무시
-            // 예외 2: 3초 이내에 SystemUI 이벤트가 있었음 → 알림바 조작으로 판단, 무시
-            if (currentPkg != null && isHomeLauncherPackage(pkg)) {
-                val inGameDuration = now - currentPkgStartTime
-                val timeSinceSystemUi = now - lastSystemUiEventTime
-                if (inGameDuration > 2000 && timeSinceSystemUi > 3000) {
-                    schedulePendingHide()
-                }
-            }
+            if (isSystemUiPackage(pkg) && pkg != packageName) return
+            if (pkg != packageName && !isHomeLauncherPackage(pkg) && !hasLauncherIcon(pkg)) return
+            if (currentPkg != null && awayStartTime == 0L) awayStartTime = android.os.SystemClock.elapsedRealtime()
+            cancelPendingHide()
+            hideAll()
+            currentPkg = null
         }
     }
 
@@ -842,6 +863,9 @@ class GameOverlayService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        monitoringForeground = false
+        handler.removeCallbacks(foregroundMonitor)
+        windowPackages.clear()
         addTaskDialog?.dismiss()
         handler.removeCallbacks(checkForeground)
         handler.removeCallbacks(retryForeground)

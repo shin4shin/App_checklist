@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#E80D1117">
+
+    <!-- 헤더 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FF161B22"
+        android:paddingStart="14dp"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:id="@+id/tvPersonalTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="나의 계획"
+            android:textColor="#F0F6FC"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvPersonalSummary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:textColor="#8B949E"
+            android:textSize="11sp"
+            android:ellipsize="end"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/tvPersonalPage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#8B949E"
+            android:textSize="11sp"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/btnPersonalPrev"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="‹"
+            android:textColor="#58A6FF"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/btnPersonalNext"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:text="›"
+            android:textColor="#58A6FF"
+            android:textSize="22sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvPersonalEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center"
+        android:textSize="13sp"
+        android:textColor="#8B949E"
+        android:visibility="gone" />
+
+    <!-- 계획 행 1~7 -->
+    <LinearLayout android:id="@+id/prow1"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck1" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName1" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime1" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/prow2"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck2" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName2" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime2" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/prow3"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck3" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName3" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime3" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/prow4"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck4" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName4" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime4" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/prow5"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck5" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName5" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime5" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/prow6"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck6" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName6" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime6" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/prow7"
+        android:layout_width="match_parent" android:layout_height="54dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingStart="12dp" android:paddingEnd="10dp">
+        <TextView android:id="@+id/pCheck7" android:layout_width="30dp"
+            android:layout_height="wrap_content" android:gravity="center" android:textSize="20sp" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical" android:paddingStart="4dp">
+            <TextView android:id="@+id/pName7" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="15sp" android:textColor="#F0F6FC" />
+            <TextView android:id="@+id/pTime7" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1"
+                android:textSize="11sp" android:textColor="#8B949E" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
