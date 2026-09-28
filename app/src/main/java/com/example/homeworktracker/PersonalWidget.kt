@@ -15,6 +15,14 @@ class PersonalWidget : AppWidgetProvider() {
         for (appWidgetId in appWidgetIds) updateWidget(context, appWidgetManager, appWidgetId)
     }
 
+    override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: android.os.Bundle) {
+        updateWidget(context, manager, id, options)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { pageMap.remove(it) }
+    }
+
     companion object {
         const val ACTION_TOGGLE_DONE = "com.example.homeworktracker.PERSONAL_TOGGLE_DONE"
         const val ACTION_NEXT_PAGE = "com.example.homeworktracker.PERSONAL_NEXT_PAGE"
@@ -31,7 +39,12 @@ class PersonalWidget : AppWidgetProvider() {
             for (id in ids) updateWidget(context, manager, id)
         }
 
-        fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
+        fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int,
+                         options: android.os.Bundle = appWidgetManager.getAppWidgetOptions(appWidgetId)) {
+            // Use the smaller advertised height so every row fits in either orientation.
+            val height = listOf(options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)).filter { it > 0 }.minOrNull() ?: 250
+            val pageSize = ((height - 44) / 60).coerceIn(1, PAGE_SIZE)
             val views = RemoteViews(context.packageName, R.layout.widget_personal)
 
             // 앱 화면과 같은 정렬: 미완료 먼저, 그다음 마감 임박 순
@@ -43,7 +56,7 @@ class PersonalWidget : AppWidgetProvider() {
 
             views.setTextViewText(R.id.tvPersonalSummary, "${plans.count { it.done }}/${plans.size} 완료")
 
-            val totalPages = if (plans.isEmpty()) 1 else (plans.size + PAGE_SIZE - 1) / PAGE_SIZE
+            val totalPages = if (plans.isEmpty()) 1 else (plans.size + pageSize - 1) / pageSize
             val currentPage = (pageMap[appWidgetId] ?: 0).coerceIn(0, totalPages - 1)
             pageMap[appWidgetId] = currentPage
             views.setTextViewText(R.id.tvPersonalPage, "${currentPage + 1}/$totalPages")
@@ -75,12 +88,12 @@ class PersonalWidget : AppWidgetProvider() {
                 listOf(R.id.prow6, R.id.pCheck6, R.id.pName6, R.id.pTime6),
                 listOf(R.id.prow7, R.id.pCheck7, R.id.pName7, R.id.pTime7),
             )
-            val startIndex = currentPage * PAGE_SIZE
+            val startIndex = currentPage * pageSize
 
             rowIds.forEachIndexed { rowIndex, ids ->
                 val (rowId, checkId, nameId, timeId) = ids
                 val planIndex = startIndex + rowIndex
-                if (planIndex >= plans.size) {
+                if (rowIndex >= pageSize || planIndex >= plans.size) {
                     views.setViewVisibility(rowId, android.view.View.GONE)
                     return@forEachIndexed
                 }
