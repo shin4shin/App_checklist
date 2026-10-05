@@ -58,8 +58,8 @@ object EventDeadline {
 
     fun label(deadline: Long, now: Long = System.currentTimeMillis()): String = when {
         deadline <= 0 -> "마감 미설정"
-        deadline <= now -> "마감 · ${format(deadline)}"
-        else -> "${remaining(deadline, now)} · ${format(deadline)}"
+        deadline <= now -> "마감 · ${format(deadline, includeYear = false)}"
+        else -> "${remaining(deadline, now)} · ${format(deadline, includeYear = false)}"
     }
 
     /** 마감까지 남은 기간. 정각 단위로 저장하므로 일·시간으로 끊고, 1시간 미만만 분으로 보여준다. */
@@ -75,5 +75,6 @@ object EventDeadline {
         }
     }
 
-    fun format(time: Long): String = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.KOREAN).format(Date(time))
+    fun format(time: Long, includeYear: Boolean = true): String =
+        SimpleDateFormat(if (includeYear) "yyyy.MM.dd HH:mm" else "MM.dd HH:mm", Locale.KOREAN).format(Date(time))
 }

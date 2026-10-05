@@ -17,9 +17,14 @@ object EventDeadlineDialog {
         dialogTitle: String = "이벤트 시간 설정",
         onSave: (Long?) -> Unit
     ): AlertDialog {
+        val compact = windowType == android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
         val builder = MaterialAlertDialogBuilder(context)
-        val content = LayoutInflater.from(builder.context).inflate(R.layout.dialog_event_deadline, null)
-        content.findViewById<TextView>(R.id.eventDeadlineTarget).text = target
+        val content = LayoutInflater.from(builder.context).inflate(
+            if (compact) R.layout.dialog_event_deadline_compact else R.layout.dialog_event_deadline, null)
+        content.findViewById<TextView>(R.id.eventDeadlineTarget).apply {
+            text = target
+            if (compact) { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
+        }
         val days = content.findViewById<NumberPicker>(R.id.eventDaysPicker).apply {
             minValue = 0
             maxValue = 3650
@@ -47,6 +52,14 @@ object EventDeadlineDialog {
         fun validate() {
             val duration = duration()
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = unchanged() || duration > 0
+            if (compact) {
+                preview.text = when {
+                    unchanged() -> "${EventDeadline.format(currentDeadline, includeYear = false)} 마감\n남은 시간 ${days.value}일 ${hours.value}시간"
+                    duration == 0L -> "1시간 이상 선택해 주세요."
+                    else -> "${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration), includeYear = false)} 마감\n분·초는 버리고 저장합니다."
+                }
+                return
+            }
             preview.text = if (unchanged()) original + "남은 시간: ${days.value}일 ${hours.value}시간\n변경 없이 저장하면 기존 마감을 유지합니다."
                 else if (duration == 0L) original + "1시간 이상 선택해 주세요."
                 else "${days.value}일 ${hours.value}시간 후\n예상 마감: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration))}\n분·초는 버리고 정각으로 저장합니다."
@@ -66,6 +79,16 @@ object EventDeadlineDialog {
         }
         windowType?.let { dialog.window?.setType(it) }
         dialog.show()
+        if (compact) {
+            val metrics = context.resources.displayMetrics
+            val width = minOf((320 * metrics.density).toInt(), metrics.widthPixels - (24 * metrics.density).toInt())
+            // Keep buttons visible in landscape; only the picker content scrolls.
+            content.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.AT_MOST),
+                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
+            val available = (metrics.heightPixels - 180 * metrics.density).toInt().coerceAtLeast((80 * metrics.density).toInt())
+            if (content.measuredHeight > available) content.layoutParams.height = available
+            dialog.window?.setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
         return dialog
     }
 }

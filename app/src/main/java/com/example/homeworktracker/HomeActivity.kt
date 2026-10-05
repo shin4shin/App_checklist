@@ -13,12 +13,30 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class HomeActivity : AppCompatActivity() {
 
+    private val notificationPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
+        DeadlineNotifications.sync(this)
+    }
+    fun requestDeadlinePermission() {
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else DeadlineNotifications.sync(this)
+    }
+    override fun onResume() {
+        super.onResume()
+        DeadlineNotifications.sync(this)
+    }
+    private fun applyNotificationTarget(intent: Intent) {
+        if (intent.hasExtra(DeadlineNotifications.OPEN)) {
+            PlannerMode.setPersonal(this, intent.getBooleanExtra(DeadlineNotifications.OPEN, false))
+        }
+    }
     private var currentNavId = R.id.nav_home
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        applyNotificationTarget(intent)
         TaskRepository(this)
         ResetScheduler.restore(this)
         currentNavId = savedInstanceState?.getInt("current_nav", R.id.nav_home)
@@ -33,6 +51,11 @@ class HomeActivity : AppCompatActivity() {
             showFragment(currentNavId)
             if (intent.action == "com.example.homeworktracker.HOMEWORK_DONE") showDonePicker()
             else checkPermissionsOnStart()
+            val notificationPrefs = getSharedPreferences("deadline_notifications", 0)
+            if (!notificationPrefs.getBoolean("permission_requested", false)) {
+                notificationPrefs.edit().putBoolean("permission_requested", true).apply()
+                requestDeadlinePermission()
+            }
         }
 
         findViewById<BottomNavigationView>(R.id.bottomNav).setOnItemSelectedListener { item ->
@@ -45,6 +68,8 @@ class HomeActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        applyNotificationTarget(intent)
+        applyModeNavigation()
         findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId =
             if (PlannerMode.isPersonal(this)) R.id.nav_home else navForCategory(intent.getStringExtra("category"))
         if (intent.action == "com.example.homeworktracker.HOMEWORK_DONE") showDonePicker()

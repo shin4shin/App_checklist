@@ -8,6 +8,7 @@ class BootReceiver : BroadcastReceiver() {
                 Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_MY_PACKAGE_REPLACED,
                 "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED")) {
             ResetScheduler.restore(context)
+            DeadlineNotifications.sync(context)
         }
     }
 }

@@ -31,6 +31,17 @@ class MoreFragment : Fragment() {
 
     private fun setupCards(view: View) {
         val ctx = requireContext()
+        view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchDeadlineNotifications).apply {
+            setOnCheckedChangeListener(null)
+            isChecked = DeadlineNotifications.enabled(ctx)
+            setOnCheckedChangeListener { _, checked ->
+                DeadlineNotifications.setEnabled(ctx, checked)
+                if (checked) (requireActivity() as HomeActivity).requestDeadlinePermission()
+            }
+        }
+        view.findViewById<View>(R.id.btnDeadlineNotificationSettings).setOnClickListener {
+            startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
+        }
         val overlayOk = Settings.canDrawOverlays(ctx)
         val accessibilityOk = isAccessibilityEnabled()
         val alarmOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)

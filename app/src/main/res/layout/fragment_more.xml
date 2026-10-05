@@ -30,6 +30,15 @@
             android:paddingTop="16dp"
             android:paddingBottom="24dp">
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchDeadlineNotifications" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:text="마감 24시간 전 알림" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="나의 계획 · 앱별 이벤트\n완료하거나 마감되면 알림이 사라집니다."
+                android:textColor="?attr/colorOnSurfaceVariant" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeadlineNotificationSettings" style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:text="알림 권한 및 표시 설정" />
             <!-- 설정 섹션 -->
             <TextView
                 android:layout_width="wrap_content"

@@ -179,5 +179,6 @@ class TaskRepository(context: Context) {
         MiniWidget.updateAllWidgets(context)
         SmallWidget.updateAllWidgets(context)
         GameOverlayService.refreshIfShowing(pkg)
+        DeadlineNotifications.sync(context)
     }
 }
