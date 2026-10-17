@@ -14,6 +14,42 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class DeadlineNotificationsTest {
+    @Test fun dismissedNotificationReturnsSilentlyAndRechecksCurrentPlans() {
+        val context = RuntimeEnvironment.getApplication()
+        shadowOf(context).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        val repo = PersonalPlanRepository(context)
+        val plan = TaskItem(title = "제출", deadline = System.currentTimeMillis() + 3_600_000L)
+        repo.save(plan)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val original = shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID)
+        val dismissed = shadowOf(original.deleteIntent).savedIntent
+        assertEquals(DeadlineNotifications.DISMISSED, dismissed.action)
+        val receiver = DeadlineNotificationReceiver()
+        repeat(2) {
+            manager.cancel(DeadlineNotifications.NOTIFICATION_ID)
+            receiver.onReceive(context, dismissed)
+            val restored = shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID)
+            assertNotNull(restored)
+            assertNull(restored.sound)
+            assertNull(restored.vibrate)
+            assertEquals(0, restored.defaults and (Notification.DEFAULT_SOUND or Notification.DEFAULT_VIBRATE))
+            assertEquals(Notification.GROUP_ALERT_SUMMARY, restored.groupAlertBehavior)
+            assertTrue(restored.flags and Notification.FLAG_ONGOING_EVENT != 0)
+            assertNotNull(restored.deleteIntent)
+        }
+        repo.setDone(plan.id, true)
+        receiver.onReceive(context, dismissed)
+        assertNull(shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID))
+        repo.setDone(plan.id, false)
+        repo.save(plan.copy(deadline = System.currentTimeMillis() - 1_000L))
+        receiver.onReceive(context, dismissed)
+        assertNull(shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID))
+        repo.save(plan)
+        DeadlineNotifications.setEnabled(context, false)
+        receiver.onReceive(context, dismissed)
+        assertNull(shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID))
+    }
+
     @Test fun alertsAt24HoursAndRemovesOnCompletionAndDeadline() {
         val context = RuntimeEnvironment.getApplication()
         shadowOf(context).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)

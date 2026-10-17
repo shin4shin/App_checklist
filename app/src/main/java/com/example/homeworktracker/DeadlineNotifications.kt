@@ -18,6 +18,7 @@ object DeadlineNotifications {
     const val NOTIFICATION_ID = 8101
     const val LEAD = 86_400_000L
     const val OPEN = "open_deadline_personal"
+    const val DISMISSED = "com.example.homeworktracker.DEADLINE_DISMISSED"
     data class Entry(val title: String, val deadline: Long, val personal: Boolean)
     fun enabled(context: Context) = context.getSharedPreferences("deadline_notifications", 0).getBoolean("enabled", true)
     fun setEnabled(context: Context, enabled: Boolean) {
@@ -36,7 +37,7 @@ object DeadlineNotifications {
         }
         return (personal + events).sortedBy { it.deadline }
     }
-    fun sync(context: Context, now: Long = System.currentTimeMillis()) {
+    fun sync(context: Context, now: Long = System.currentTimeMillis(), silent: Boolean = false) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "마감 임박 일정", NotificationManager.IMPORTANCE_HIGH).apply {
             description = "나의 계획과 앱별 이벤트를 마감 24시간 전부터 알려줍니다."
@@ -65,6 +66,9 @@ object DeadlineNotifications {
             if (!first.personal) putExtra("category", "Event")
         }
         val content = PendingIntent.getActivity(context, 8101, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val dismissed = PendingIntent.getBroadcast(context, 8101,
+            Intent(context, DeadlineNotificationReceiver::class.java).setAction(DISMISSED),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val style = NotificationCompat.InboxStyle().setBigContentTitle("마감이 가까운 일정 ${due.size}개")
         due.take(6).forEach { style.addLine("${it.title} · ${EventDeadline.format(it.deadline, includeYear = false)}까지") }
         if (due.size > 6) style.setSummaryText("외 ${due.size - 6}개")
@@ -73,6 +77,7 @@ object DeadlineNotifications {
             .setContentTitle(if (due.size == 1) first.title else "${first.title} 외 ${due.size - 1}개")
             .setContentText("${EventDeadline.format(first.deadline, includeYear = false)}까지 · 마감 24시간 이내")
             .setStyle(style).setContentIntent(content)
+            .setDeleteIntent(dismissed).setSilent(silent)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true).setOnlyAlertOnce(true).setAutoCancel(false)
@@ -84,5 +89,7 @@ object DeadlineNotifications {
 }
 
 class DeadlineNotificationReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) { DeadlineNotifications.sync(context) }
+    override fun onReceive(context: Context, intent: Intent) {
+        DeadlineNotifications.sync(context, silent = intent.action == DeadlineNotifications.DISMISSED)
+    }
 }

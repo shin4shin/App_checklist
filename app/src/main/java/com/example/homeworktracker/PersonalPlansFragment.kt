@@ -11,7 +11,6 @@ import android.widget.TextView
 import android.widget.EditText
 import androidx.fragment.app.Fragment
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -61,6 +60,7 @@ class PersonalPlansFragment : Fragment() {
                 radius = dp(16).toFloat(); strokeWidth = 0; cardElevation = 0f
                 setCardBackgroundColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorSurfaceVariant))
                 layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }
+                setOnClickListener { editPlan(plan) }
             }
             val line = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL
@@ -87,10 +87,6 @@ class PersonalPlansFragment : Fragment() {
             deadlines[plan.id] = time
             labels.addView(time)
             line.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
-            line.addView(MaterialButton(requireContext()).apply {
-                text = "수정"; contentDescription = "${plan.title} 수정"
-                setOnClickListener { editPlan(plan) }
-            })
             card.addView(line); list.addView(card)
         }
     }

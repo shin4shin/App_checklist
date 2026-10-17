@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class PersonalPlansTest {
-    @Test fun directEditorSavesTitleAndWheelTimeOnlyWhenConfirmed() {
+    @Test fun directEditorSavesTitleAndCalendarTimeOnlyWhenConfirmed() {
         val context = RuntimeEnvironment.getApplication()
         PlannerMode.setPersonal(context, true)
         val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
@@ -43,6 +43,19 @@ class PersonalPlansTest {
         assertEquals(expected, saved.deadline)
         assertFalse(saved.done)
         assertTrue(TaskRepository(context).packages().isEmpty())
+        val list = controller.get().findViewById<android.widget.LinearLayout>(R.id.personalPlanList)
+        val card = list.getChildAt(0) as com.google.android.material.card.MaterialCardView
+        val row = card.getChildAt(0) as android.widget.LinearLayout
+        (row.getChildAt(0) as com.google.android.material.checkbox.MaterialCheckBox).performClick()
+        assertTrue(PersonalPlanRepository(context).plans().single().done)
+        list.getChildAt(0).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        val reopened = org.robolectric.shadows.ShadowDialog.getLatestDialog() as androidx.appcompat.app.AlertDialog
+        assertEquals("운동하기", reopened.findViewById<android.widget.EditText>(R.id.personalPlanTitle)!!.text.toString())
+        reopened.findViewById<android.widget.EditText>(R.id.personalPlanTitle)!!.setText("산책하기")
+        reopened.getButton(-1).performClick()
+        assertEquals("산책하기", PersonalPlanRepository(context).plans().single().title)
+        assertTrue(PersonalPlanRepository(context).plans().single().done)
         controller.pause().stop().destroy()
     }
 
