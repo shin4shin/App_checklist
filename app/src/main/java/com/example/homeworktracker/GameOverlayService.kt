@@ -15,10 +15,10 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.abs
@@ -51,7 +51,7 @@ class GameOverlayService : AccessibilityService() {
     private var overlayView: View? = null
     private var tabView: View? = null
     private var revealOverlayView: View? = null
-    private var revealParams: WindowManager.LayoutParams? = null
+    private var tabLongPressRunnable: Runnable? = null
     private var windowManager: WindowManager? = null
     private var currentPkg: String? = null
     private var savedY = -1
@@ -70,7 +70,21 @@ class GameOverlayService : AccessibilityService() {
     private var addTaskDialog: androidx.appcompat.app.AlertDialog? = null
     private var isDialogShowing = false  // 마감 설정 창이 떠 있는 동안 바깥 터치로 접히지 않게
 
-    private val overlayWidthPx get() = (220 * resources.displayMetrics.density).toInt()
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+    private val screenBounds: android.graphics.Rect
+        get() {
+            if (Build.VERSION.SDK_INT >= 30) return windowManager!!.currentWindowMetrics.bounds
+            val metrics = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            windowManager!!.defaultDisplay.getRealMetrics(metrics)
+            return android.graphics.Rect(0, 0, metrics.widthPixels, metrics.heightPixels)
+        }
+    private val handleWidth get() = dp(48) * 2 / 3
+    private val handleHeight get() = dp(88) * 2 / 3
+    private val isOnLeft get() = savedX == 0
+    private val panelWidth get() = minOf(dp(320), (screenBounds.width() * 0.85f).toInt() - handleWidth).coerceAtLeast(1)
+    private fun handleY() = savedY.coerceIn(0, (screenBounds.height() - handleHeight).coerceAtLeast(0))
+    private fun handleX() = if (isOnLeft) 0 else (screenBounds.width() - handleWidth).coerceAtLeast(0)
 
     private data class Category(val key: String, val displayName: String, val color: Int)
     private val categories = listOf(
@@ -84,7 +98,7 @@ class GameOverlayService : AccessibilityService() {
         instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        savedY = prefs.getInt("overlay_tab_y", resources.displayMetrics.heightPixels / 3)
+        savedY = prefs.getInt("overlay_tab_y", screenBounds.height() / 3)
         savedX = prefs.getInt("overlay_tab_x", 0)
     }
 
@@ -220,53 +234,108 @@ class GameOverlayService : AccessibilityService() {
         }
     }
 
-    // ─── 오버레이 표시 ──────────────────────────────────────────────────
-    private fun showOverlay(pkg: String) {
-        hideAll()
-        val view = buildOverlayView(pkg)
-
-        val verticalMargin = constrainOverlayHeight(view)
-        val isPortrait = resources.configuration.orientation ==
-                android.content.res.Configuration.ORIENTATION_PORTRAIT
-        val leftMargin = if (isPortrait) (16 * resources.displayMetrics.density).toInt() else 0
-        val params = makeOverlayParams().apply {
-            flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-            gravity = Gravity.LEFT or Gravity.TOP
-            x = leftMargin
-            y = verticalMargin
+    // The panel and its handle share a drawer so they move as one surface.
+    private fun buildDrawer(pkg: String): FrameLayout {
+        val root = FrameLayout(this)
+        val scrim = View(this).apply {
+            tag = "scrim"
+            setBackgroundColor(Color.parseColor("#66000000"))
+            setOnClickListener { if (!isDialogShowing) collapseDrawer(pkg) }
         }
-
-        view.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_OUTSIDE && !isDialogShowing) {
-                isMinimized = true
-                minimizeToTab(pkg)
-                true
-            } else false
+        root.addView(scrim, FrameLayout.LayoutParams(-1, -1))
+        val drawer = FrameLayout(this).apply { tag = "drawer" }
+        root.addView(drawer, FrameLayout.LayoutParams(panelWidth + handleWidth, -1,
+            Gravity.TOP or if (isOnLeft) Gravity.LEFT else Gravity.RIGHT))
+        val panel = buildOverlayView(pkg)
+        panel.setBackgroundColor(Color.parseColor("#161B22"))
+        panel.isClickable = true
+        panel.findViewById<android.widget.ScrollView>(R.id.taskScroll).layoutParams =
+            LinearLayout.LayoutParams(-1, 0, 1f)
+        drawer.addView(panel, FrameLayout.LayoutParams(panelWidth, -1,
+            Gravity.TOP or if (isOnLeft) Gravity.LEFT else Gravity.RIGHT))
+        attachHeaderDrag(panel, pkg)
+        val handle = buildHandle().apply {
+            tag = "drawer_handle"
+            contentDescription = "오버레이 접기"
+            setOnClickListener { collapseDrawer(pkg) }
         }
+        drawer.addView(handle, FrameLayout.LayoutParams(handleWidth, handleHeight,
+            Gravity.TOP or if (isOnLeft) Gravity.RIGHT else Gravity.LEFT).apply { topMargin = handleY() })
+        var startX = 0f
+        handle.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { startX = event.rawX; true }
+                MotionEvent.ACTION_MOVE -> {
+                    val distance = (event.rawX - startX) * if (isOnLeft) -1 else 1
+                    setReveal(root, 1f - distance.coerceAtLeast(0f) / panelWidth)
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (abs(event.rawX - startX) < dp(8)) handle.performClick()
+                    else if (abs(drawer.translationX) > panelWidth * 0.25f) collapseDrawer(pkg)
+                    else animateReveal(root, 1f)
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> { animateReveal(root, 1f); true }
+                else -> false
+            }
+        }
+        return root
+    }
 
-        try {
-            windowManager?.addView(view, params)
-            overlayView = view
-            attachHeaderDrag(view, pkg)
-        } catch (e: Exception) {
-            android.util.Log.e("GameOverlay", "showOverlay addView 실패: ${e.message}")
+    private fun buildHandle(): FrameLayout = FrameLayout(this).apply {
+        contentDescription = "오버레이 펼치기, 위아래로 끌어 위치 이동"
+        isFocusable = true
+        alpha = currentAlpha
+        background = GradientDrawable().apply {
+            setColor(Color.parseColor("#E6161B22"))
+            val radius = dp(24) * 2 / 3f
+            cornerRadii = if (isOnLeft) floatArrayOf(0f, 0f, radius, radius, radius, radius, 0f, 0f)
+                else floatArrayOf(radius, radius, 0f, 0f, 0f, 0f, radius, radius)
+        }
+        addView(View(this@GameOverlayService).apply {
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#E6EDF3")); cornerRadius = dp(3) * 2 / 3f
+            }
+        }, FrameLayout.LayoutParams((dp(5) * 2 / 3).coerceAtLeast(1), dp(32) * 2 / 3, Gravity.CENTER))
+    }
+
+    private fun drawerParams() = edgeOverlayParams().apply {
+        width = WindowManager.LayoutParams.MATCH_PARENT
+        height = WindowManager.LayoutParams.MATCH_PARENT
+        gravity = Gravity.TOP or Gravity.LEFT
+        flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+    }
+
+    private fun setReveal(root: View, progress: Float) {
+        val fraction = progress.coerceIn(0f, 1f)
+        root.findViewWithTag<View>("drawer").translationX = (1f - fraction) * panelWidth * if (isOnLeft) -1 else 1
+        root.findViewWithTag<View>("scrim").alpha = fraction
+    }
+
+    private fun animateReveal(root: View, progress: Float, finished: () -> Unit = {}) {
+        root.findViewWithTag<View>("drawer").animate()
+            .translationX((1f - progress) * panelWidth * if (isOnLeft) -1 else 1)
+            .setDuration(220).setInterpolator(DecelerateInterpolator()).withEndAction(finished).start()
+        root.findViewWithTag<View>("scrim").animate().alpha(progress).setDuration(220).start()
+    }
+
+    private fun collapseDrawer(pkg: String) {
+        val root = overlayView ?: return
+        animateReveal(root, 0f) {
+            if (overlayView === root) { isMinimized = true; minimizeToTab(pkg) }
         }
     }
 
-    // 화면 위아래에 같은 여백을 남기고, 내용이 넘치면 목록만 스크롤되도록 높이를 제한한다.
-    // 반환값은 창의 y 위치로 쓰는 위아래 여백.
-    private fun constrainOverlayHeight(view: View): Int {
-        val screenH = resources.displayMetrics.heightPixels
-        val verticalMargin = (screenH * 0.08f).toInt()
-        val availableH = screenH - verticalMargin * 2
-        val scroll = view.findViewById<android.widget.ScrollView>(R.id.taskScroll)
-        val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        view.measure(unspecified, unspecified)
-        if (view.measuredHeight > availableH) {
-            // 헤더·구분선·슬라이더가 쓰는 높이를 뺀 나머지를 목록에 배정
-            scroll.layoutParams.height = availableH - (view.measuredHeight - scroll.measuredHeight)
+    private fun showOverlay(pkg: String) {
+        hideAll()
+        val view = buildDrawer(pkg)
+        try {
+            windowManager?.addView(view, drawerParams())
+            overlayView = view
+        } catch (e: Exception) {
+            android.util.Log.e("GameOverlay", "showOverlay addView 실패: ${e.message}")
         }
-        return verticalMargin
     }
 
     // ─── 오버레이 뷰 생성 (WindowManager 미등록) ────────────────────────
@@ -353,6 +422,7 @@ class GameOverlayService : AccessibilityService() {
                     currentAlpha = value.coerceAtLeast(20) / 100f
                     view.alpha = currentAlpha
                     tabView?.alpha = currentAlpha
+                    overlayView?.findViewWithTag<View>("drawer_handle")?.alpha = currentAlpha
                     tvAlphaValue.text = "$value%"
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
@@ -364,10 +434,10 @@ class GameOverlayService : AccessibilityService() {
         }
 
         view.findViewById<TextView>(R.id.btnMinimizeOverlay).apply {
+            text = if (isOnLeft) "◀" else "▶"
             contentDescription = "오버레이 최소화"
             setOnClickListener {
-                isMinimized = true
-                minimizeToTab(pkg)
+                collapseDrawer(pkg)
             }
         }
 
@@ -434,243 +504,130 @@ class GameOverlayService : AccessibilityService() {
         dialog.setOnDismissListener { isDialogShowing = false }
     }
 
-    // ─── 탭으로 접기 ────────────────────────────────────────────────────
+    // Saved coordinates change only after an intentional handle move.
     private fun minimizeToTab(pkg: String) {
-        overlayView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            overlayView = null
+        hideAll()
+        currentAlpha = getSharedPreferences("app_prefs", MODE_PRIVATE).getInt("overlay_alpha", 90) / 100f
+        val tab = buildHandle()
+        val params = edgeOverlayParams().apply {
+            width = handleWidth; height = handleHeight
+            gravity = Gravity.TOP or Gravity.LEFT
+            flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            x = handleX(); y = handleY()
         }
-        revealOverlayView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            revealOverlayView = null
-            revealParams = null
-        }
-        // 이미 탭이 존재하면 먼저 제거 (중복 방지)
-        tabView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            tabView = null
-        }
-
-        val screenW = resources.displayMetrics.widthPixels
-        val dp = resources.displayMetrics.density
-        val isOnLeft = savedX < screenW / 2
-
-        val tab = TextView(this).apply {
-            text = if (isOnLeft) "▶" else "◀"
-            textSize = 16f
-            setTextColor(Color.parseColor("#58A6FF"))
-            gravity = Gravity.CENTER
-            setPadding(0, (22 * dp).toInt(), (14 * dp).toInt(), (22 * dp).toInt())
-            background = ContextCompat.getDrawable(this@GameOverlayService, R.drawable.bg_overlay_tab)
-            alpha = currentAlpha
-        }
-
-        val screenH = resources.displayMetrics.heightPixels
-        val clampedY = savedY.coerceIn(0, (screenH - (120 * dp).toInt()).coerceAtLeast(0))
-
-        val tabParams = makeOverlayParams().apply {
-            width  = WindowManager.LayoutParams.WRAP_CONTENT
-            height = WindowManager.LayoutParams.WRAP_CONTENT
-            gravity = Gravity.LEFT or Gravity.TOP
-            flags = flags or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            x = if (isOnLeft) 0 else (screenW - (48 * dp).toInt()).coerceAtLeast(0)
-            y = clampedY
-        }
-
-        var touchStartX = 0f
-        var touchStartY = 0f
-        var initTabX = 0
-        var initTabY = 0
-        var isDragging = false
-        var isSliding = false
-        var longPressTriggered = false
-
-        val dismissAction = {
-            dismissedPkg = pkg
-            isMinimized = false
-            hideAll()
-        }
-
-        val longPressRunnable = Runnable {
-            longPressTriggered = true
-            showDeleteZone(dismissAction)
-        }
-
+        var startX = 0f
+        var startY = 0f
+        var initialX = 0
+        var initialY = 0
+        var dragging = false
+        var sliding = false
+        var longPressed = false
+        var reveal = 0f
+        val dismiss = { dismissedPkg = pkg; isMinimized = false; hideAll() }
+        val longPress = Runnable { longPressed = true; showDeleteZone(dismiss) }
+        tabLongPressRunnable = longPress
+        tab.setOnClickListener { expandFromTab(pkg) }
         tab.setOnTouchListener { _, event ->
-            when (event.action) {
+            when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    touchStartX = event.rawX
-                    touchStartY = event.rawY
-                    initTabX = tabParams.x
-                    initTabY = tabParams.y
-                    isDragging = false
-                    isSliding = false
-                    longPressTriggered = false
-                    handler.postDelayed(longPressRunnable, 450)
+                    startX = event.rawX; startY = event.rawY
+                    initialX = params.x; initialY = params.y
+                    dragging = false; sliding = false; longPressed = false; reveal = 0f
+                    handler.postDelayed(longPress, 450)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = event.rawX - touchStartX
-                    val dy = event.rawY - touchStartY
-                    val adx = abs(dx)
-                    val ady = abs(dy)
-
-                    if (longPressTriggered && !isDragging) {
-                        isDragging = true
-                    }
-
-                    if (!isDragging && !isSliding && (adx > 20 * dp || ady > 20 * dp)) {
-                        handler.removeCallbacks(longPressRunnable)
-                        if (adx > ady) {
-                            isSliding = true
+                    val dx = event.rawX - startX
+                    val dy = event.rawY - startY
+                    if (!dragging && !sliding && (abs(dx) > dp(8) || abs(dy) > dp(8))) {
+                        handler.removeCallbacks(longPress)
+                        if (!longPressed && abs(dx) > abs(dy)) {
+                            sliding = true
                             prepareRevealOverlay(pkg)
+                            tab.alpha = 0f
                         } else {
-                            isDragging = true
-                            showDeleteZone(dismissAction)
+                            dragging = true
+                            showDeleteZone(dismiss)
                         }
                     }
-
-                    if (isDragging) {
-                        tabParams.x = (initTabX + dx.toInt())
-                        tabParams.y = (initTabY + dy.toInt()).coerceAtLeast(0)
-                        try { windowManager?.updateViewLayout(tab, tabParams) } catch (e: Exception) {}
-                        val inZone = isInDeleteZone(event.rawY)
-                        (deleteZoneView as? TextView)?.apply {
-                            setTextColor(if (inZone) Color.parseColor("#F85149") else Color.parseColor("#F0F6FC"))
-                            (background as? GradientDrawable)?.setColor(
-                                if (inZone) Color.parseColor("#CC3B1319") else Color.parseColor("#CC161B22")
-                            )
-                        }
+                    if (sliding) {
+                        reveal = ((if (isOnLeft) dx else -dx) / panelWidth).coerceIn(0f, 1f)
+                        revealOverlayView?.let { setReveal(it, reveal) }
+                    }
+                    if (dragging) {
+                        params.x = (initialX + dx.toInt()).coerceIn(0, (screenBounds.width() - handleWidth).coerceAtLeast(0))
+                        params.y = (initialY + dy.toInt()).coerceIn(0, (screenBounds.height() - handleHeight).coerceAtLeast(0))
+                        windowManager?.updateViewLayout(tab, params)
+                        (deleteZoneView as? TextView)?.setTextColor(
+                            Color.parseColor(if (isInDeleteZone(event.rawY)) "#F85149" else "#F0F6FC"))
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    handler.removeCallbacks(longPressRunnable)
+                    handler.removeCallbacks(longPress)
                     when {
-                        isDragging -> {
-                            isDragging = false
-                            if (isInDeleteZone(event.rawY)) {
-                                hideDeleteZone()
-                                dismissAction()
-                            } else {
-                                val sw = resources.displayMetrics.widthPixels
-                                val snapX = if (tabParams.x < sw / 2) 0 else sw
-                                tabParams.x = snapX
-                                savedX = snapX
-                                savedY = tabParams.y
-                                tab.text = if (snapX == 0) "▶" else "◀"
+                        dragging -> {
+                            if (isInDeleteZone(event.rawY)) dismiss()
+                            else {
+                                savedX = if (params.x + handleWidth / 2 < screenBounds.width() / 2) 0 else screenBounds.width()
+                                savedY = params.y
                                 getSharedPreferences("app_prefs", MODE_PRIVATE).edit()
-                                    .putInt("overlay_tab_x", savedX)
-                                    .putInt("overlay_tab_y", savedY)
-                                    .apply()
-                                try { windowManager?.updateViewLayout(tab, tabParams) } catch (e: Exception) {}
-                                hideDeleteZone()
+                                    .putInt("overlay_tab_x", savedX).putInt("overlay_tab_y", savedY).apply()
+                                minimizeToTab(pkg)
                             }
                         }
-                        isSliding -> {
-                            isSliding = false
-                            completeReveal(pkg, tab, tabParams)
+                        sliding -> {
+                            if (reveal >= 0.25f) completeReveal()
+                            else minimizeToTab(pkg)
                         }
-                        longPressTriggered -> {
-                            hideDeleteZone()
-                        }
-                        else -> {
-                            expandFromTab(pkg)
-                        }
+                        longPressed -> hideDeleteZone()
+                        else -> tab.performClick()
                     }
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> {
-                    handler.removeCallbacks(longPressRunnable)
-                    isDragging = false
-                    isSliding = false
-                    longPressTriggered = false
-                    hideDeleteZone()
-                    revealOverlayView?.let {
-                        try { windowManager?.removeView(it) } catch (e: Exception) {}
-                        revealOverlayView = null
-                        revealParams = null
-                    }
-                    false
+                    handler.removeCallbacks(longPress)
+                    minimizeToTab(pkg)
+                    true
                 }
                 else -> false
             }
         }
-
         try {
-            windowManager?.addView(tab, tabParams)
+            windowManager?.addView(tab, params)
             tabView = tab
         } catch (e: Exception) {
             android.util.Log.e("GameOverlay", "minimizeToTab addView 실패: ${e.message}")
         }
     }
 
-    // ─── 드래그 중 오버레이 미리 생성 (translationX로 화면 밖에 숨김) ──
     private fun prepareRevealOverlay(pkg: String) {
-        revealOverlayView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) {}
-            revealOverlayView = null
-        }
-        val view = buildOverlayView(pkg)
-        val verticalMargin = constrainOverlayHeight(view)
-        val isPortrait = resources.configuration.orientation ==
-                android.content.res.Configuration.ORIENTATION_PORTRAIT
-        val params = makeOverlayParams().apply {
-            flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-            gravity = Gravity.LEFT or Gravity.TOP
-            x = if (isPortrait) (16 * resources.displayMetrics.density).toInt() else 0
-            y = verticalMargin
-        }
-        view.translationX = -overlayWidthPx.toFloat()  // 화면 왼쪽 밖으로 숨김
-        windowManager?.addView(view, params)
-        revealOverlayView = view
-        revealParams = params
+        val root = buildDrawer(pkg)
+        setReveal(root, 0f)
+        windowManager?.addView(root, drawerParams())
+        revealOverlayView = root
     }
 
-    // ─── 슬라이드인: translationX 0까지, 탭은 오른쪽으로 밀려 사라짐 ──
-    private fun completeReveal(pkg: String, tab: View, tabParams: WindowManager.LayoutParams) {
-        val overlay = revealOverlayView ?: return
-
-        // 오버레이: translationX -overlayWidthPx → 0
-        overlay.animate()
-            .translationX(0f)
-            .setDuration(220)
-            .setInterpolator(DecelerateInterpolator())
-            .withEndAction {
-                isMinimized = false
-                overlayView = revealOverlayView
-                revealOverlayView = null
-                revealParams = null
-                overlayView?.setOnTouchListener { _, event ->
-                    if (event.action == MotionEvent.ACTION_OUTSIDE && !isDialogShowing) {
-                        isMinimized = true
-                        minimizeToTab(pkg)
-                        true
-                    } else false
-                }
-                overlayView?.let { attachHeaderDrag(it, pkg) }
-                try { windowManager?.removeView(tab) } catch (e: Exception) {}
-                if (tab === tabView) tabView = null
-            }
-            .start()
-
-        // 탭: 페이드 아웃 (제거는 overlay withEndAction에서 처리)
-        tab.animate()
-            .alpha(0f)
-            .setDuration(180)
-            .start()
-    }
-
-    // ─── 탭 탭(단순 클릭) → 오버레이 펼치기 ──────────────────────────
-    private fun expandFromTab(pkg: String) {
+    private fun completeReveal() {
+        val root = revealOverlayView ?: return
+        overlayView = root
+        revealOverlayView = null
         isMinimized = false
-        tabView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            tabView = null
-        }
-        showOverlay(pkg)
+        tabView?.let { windowManager?.removeView(it) }
+        tabView = null
+        animateReveal(root, 1f)
+    }
+
+    private fun expandFromTab(pkg: String) {
+        prepareRevealOverlay(pkg)
+        completeReveal()
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val pkg = currentPkg ?: return
+        if (pkg == dismissedPkg) return
+        if (isMinimized) minimizeToTab(pkg) else showOverlay(pkg)
     }
 
     private fun schedulePendingHide() {
@@ -795,12 +752,18 @@ class GameOverlayService : AccessibilityService() {
     }
 
     private fun isInDeleteZone(rawY: Float): Boolean {
-        val screenHeight = resources.displayMetrics.heightPixels
+        val screenHeight = screenBounds.height()
         val dp = resources.displayMetrics.density
         return rawY > screenHeight - (110 * dp).toInt()
     }
 
     private fun hideAll() {
+        tabLongPressRunnable?.let { handler.removeCallbacks(it) }
+        tabLongPressRunnable = null
+        for (root in listOfNotNull(overlayView, revealOverlayView)) {
+            root.findViewWithTag<View>("drawer")?.animate()?.cancel()
+            root.findViewWithTag<View>("scrim")?.animate()?.cancel()
+        }
         headerLongPressRunnable?.let { handler.removeCallbacks(it) }
         headerLongPressRunnable = null
         overlayView?.let {
@@ -816,7 +779,17 @@ class GameOverlayService : AccessibilityService() {
             revealOverlayView = null
         }
         hideDeleteZone()
-        revealParams = null
+    }
+
+    // Use physical screen edges, including the camera cutout and system bar areas.
+    private fun edgeOverlayParams() = makeOverlayParams().apply {
+        flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        if (Build.VERSION.SDK_INT >= 30) {
+            setFitInsetsTypes(0)
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else if (Build.VERSION.SDK_INT >= 28) {
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
     }
 
     private fun makeOverlayParams() = WindowManager.LayoutParams(

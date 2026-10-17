@@ -1,0 +1,11 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widgetRow"
+ android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="60dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingEnd="8dp">
+ <TextView android:id="@+id/widgetCheck" android:layout_width="48dp" android:layout_height="match_parent" android:minHeight="60dp" android:gravity="center" android:textSize="22sp" />
+ <ImageView android:id="@+id/widgetIcon" android:layout_width="32dp" android:layout_height="32dp" android:layout_marginEnd="8dp" />
+ <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
+  <TextView android:id="@+id/widgetName" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#F0F6FC" android:textSize="14sp" android:maxLines="2" android:ellipsize="end" />
+  <TextView android:id="@+id/widgetDetail" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#8B949E" android:textSize="11sp" android:maxLines="2" android:ellipsize="end" />
+ </LinearLayout>
+ <TextView android:id="@+id/widgetRemaining" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxWidth="120dp" android:gravity="end" android:textColor="#8B949E" android:textSize="12sp" android:visibility="gone" />
+ <TextView android:id="@+id/widgetLaunch" android:layout_width="40dp" android:layout_height="48dp" android:gravity="center" android:text="›" android:textColor="#58A6FF" android:textSize="20sp" android:contentDescription="앱 실행" />
+</LinearLayout>

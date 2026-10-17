@@ -114,7 +114,7 @@ class EventDeadlineTest {
         val id = shadowOf(manager).createWidget(HomeworkWidget::class.java, R.layout.widget_homework)
         HomeworkWidget().onReceive(context, Intent(HomeworkWidget.ACTION_SELECT_TAB)
             .putExtra(HomeworkWidget.EXTRA_WIDGET_ID, id).putExtra(HomeworkWidget.EXTRA_CATEGORY, "Event"))
-        assertTrue(shadowOf(manager).getViewFor(id).findViewById<android.widget.TextView>(R.id.tvAppName1).text.endsWith("· 마감"))
+        assertEquals("마감", WidgetCollections.rows(context, "homework", "Event").single().detail)
     }
 
     @Test fun editorAcceptsDurationAndDoesNotSaveUntilConfirmed() {

@@ -11,6 +11,7 @@
             <category android:name="android.intent.category.HOME" />
         </intent>
     </queries>
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -57,8 +58,6 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.example.homeworktracker.TOGGLE_DONE" />
-                <action android:name="com.example.homeworktracker.NEXT_PAGE" />
-                <action android:name="com.example.homeworktracker.PREV_PAGE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -71,8 +70,6 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.example.homeworktracker.MINI_TOGGLE_DONE" />
-                <action android:name="com.example.homeworktracker.MINI_NEXT_PAGE" />
-                <action android:name="com.example.homeworktracker.MINI_PREV_PAGE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -85,8 +82,6 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.example.homeworktracker.SMALL_TOGGLE_DONE" />
-                <action android:name="com.example.homeworktracker.SMALL_NEXT_PAGE" />
-                <action android:name="com.example.homeworktracker.SMALL_PREV_PAGE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -100,8 +95,6 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.example.homeworktracker.PERSONAL_TOGGLE_DONE" />
-                <action android:name="com.example.homeworktracker.PERSONAL_NEXT_PAGE" />
-                <action android:name="com.example.homeworktracker.PERSONAL_PREV_PAGE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -109,6 +102,7 @@
         </receiver>
 
         <receiver android:name=".DeadlineNotificationReceiver" android:exported="false" />
+        <service android:name=".WidgetListService" android:permission="android.permission.BIND_REMOTEVIEWS" android:exported="false" />
 
         <!-- 초기화 BroadcastReceiver -->
         <receiver android:name=".ResetReceiver"

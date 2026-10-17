@@ -370,8 +370,9 @@ class DailyFragment : Fragment() {
                     visibility = if (category == "Event") View.VISIBLE else View.GONE
                     text = EventDeadline.label(task.deadline)
                 }
-                holder.itemView.findViewById<TextView>(R.id.btnTaskDeadline).apply {
-                    visibility = if (category == "Event") View.VISIBLE else View.GONE
+                if (category == "Event") holder.itemView.apply {
+                    isClickable = true
+                    isFocusable = true
                     contentDescription = "${task.title} 시간 설정"
                     setOnClickListener {
                         EventDeadlineDialog.show(ctx, "${app.name} · ${task.title}\n목록에서 저장을 누르면 적용됩니다.", task.deadline) { duration ->
@@ -397,20 +398,59 @@ class DailyFragment : Fragment() {
             val text = etNewTask.text.toString().trim()
             if (text.isNotEmpty()) { currentTasks.add(TaskItem(title = text)); taskAdapter.notifyItemInserted(currentTasks.size - 1); etNewTask.text.clear() }
         }
-        AlertDialog.Builder(ctx)
+        val dialog = AlertDialog.Builder(ctx)
             .setTitle("${app.name} - 할 일 목록")
             .setView(dialogView)
             .setPositiveButton("저장") { _, _ ->
                 repository.saveTasks(app.packageName, category, currentTasks)
                 adapter.notifyDataSetChanged()
             }
-            .setNeutralButton(if (repository.isDone(app.packageName, category)) "완료 취소" else "전체 완료") { _, _ ->
+            .setNeutralButton(if (category == "Event") "가져오기" else if (repository.isDone(app.packageName, category)) "완료 취소" else "전체 완료") { _, _ ->
                 val done = !repository.isDone(app.packageName, category)
                 repository.saveTasks(app.packageName, category, currentTasks)
                 repository.setDone(app.packageName, category, done)
             }
             .setNegativeButton("취소", null)
             .show()
+        if (category == "Event") dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            val game = EventImportClient.gameForPackage(app.packageName)
+            if (game == null) {
+                Toast.makeText(ctx, "가져오기는 젠레스 존 제로와 붕괴: 스타레일을 지원합니다", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            val button = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            button.isEnabled = false
+            button.text = "불러오는 중"
+            val host = activity ?: return@setOnClickListener
+            Thread {
+                val result = runCatching { EventImportClient.fetch(game) }
+                host.runOnUiThread {
+                    if (!isAdded || host.isDestroyed || !dialog.isShowing) return@runOnUiThread
+                    button.isEnabled = true
+                    button.text = "가져오기"
+                    result.onSuccess { events ->
+                        if (events.isEmpty()) {
+                            Toast.makeText(ctx, "가져올 이벤트가 없습니다", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val selected = BooleanArray(events.size) { true }
+                            AlertDialog.Builder(ctx)
+                                .setTitle("이벤트 가져오기")
+                                .setMultiChoiceItems(events.map { "${it.title}\n${EventDeadline.label(it.deadline)}" }.toTypedArray(), selected) { _, index, checked -> selected[index] = checked }
+                                .setPositiveButton("추가") { _, _ ->
+                                    val merged = EventImportClient.merge(currentTasks, events.filterIndexed { index, _ -> selected[index] })
+                                    currentTasks.clear()
+                                    currentTasks.addAll(merged)
+                                    taskAdapter.notifyDataSetChanged()
+                                }
+                                .setNegativeButton("취소", null)
+                                .show()
+                        }
+                    }.onFailure {
+                        Toast.makeText(ctx, "이벤트를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }.start()
+        }
     }
 
     private fun showOverlaySetupDialog() {

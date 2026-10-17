@@ -1,0 +1,13 @@
+{
+  "name": "checklist-events-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "test": "node --test",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "check": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": { "wrangler": "4.151.1" }
+}

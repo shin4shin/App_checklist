@@ -176,19 +176,19 @@ class ChecklistRegressionTest {
             HomeworkWidget().onReceive(context, Intent(HomeworkWidget.ACTION_SELECT_TAB)
                 .putExtra(HomeworkWidget.EXTRA_WIDGET_ID, widgetId).putExtra(HomeworkWidget.EXTRA_CATEGORY, category))
         }
-        fun firstRow() = shadowOf(manager).getViewFor(widgetId).findViewById<android.view.View>(R.id.row1)
+        fun rowCount() = WidgetCollections.rows(context, "homework", context.getSharedPreferences("widget_prefs", 0).getString("tab_$widgetId", "Daily")!!).size
         select("Weekly")
-        assertEquals(android.view.View.GONE, firstRow().visibility)
+        assertEquals(0, rowCount())
         assertTrue(pkg in repo.packages("Weekly"))
         select("Daily")
-        assertEquals(android.view.View.VISIBLE, firstRow().visibility)
+        assertEquals(1, rowCount())
         context.getSharedPreferences("reset_times", 0).edit()
             .putInt("${pkg}_Weekly_hour", 0).putInt("${pkg}_Weekly_minute", 0).commit()
         select("Weekly")
-        assertEquals(android.view.View.VISIBLE, firstRow().visibility)
+        assertEquals(1, rowCount())
         context.getSharedPreferences("reset_times", 0).edit().remove("${pkg}_Weekly_hour").commit()
         HomeworkWidget.updateAllWidgets(context)
-        assertEquals(android.view.View.GONE, firstRow().visibility)
+        assertEquals(0, rowCount())
     }
 
     @Test fun widgetEventTabPersistsSelectionAndTogglesOnlyEventTasks() {

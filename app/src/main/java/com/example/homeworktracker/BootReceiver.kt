@@ -9,6 +9,7 @@ class BootReceiver : BroadcastReceiver() {
                 "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED")) {
             ResetScheduler.restore(context)
             DeadlineNotifications.sync(context)
+            PersonalWidget.updateAllWidgets(context)
         }
     }
 }

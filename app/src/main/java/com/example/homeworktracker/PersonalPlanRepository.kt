@@ -34,6 +34,14 @@ class PersonalPlanRepository(context: Context) {
             else items + normalized.copy(done = false)
         }
     }
-    fun setDone(id: String, done: Boolean) = change { items -> items.map { if (it.id == id) it.copy(done = done) else it } }
-    fun delete(id: String) = change { items -> items.filterNot { it.id == id } }
+    fun setDone(id: String, done: Boolean) = change { items -> items.map {
+        if (it.id == id && it.done != done) {
+            PersonalWidgetOrder.record(context, id, done)
+            it.copy(done = done)
+        } else it
+    } }
+    fun delete(id: String) = change { items ->
+        PersonalWidgetOrder.record(context, id, false)
+        items.filterNot { it.id == id }
+    }
 }

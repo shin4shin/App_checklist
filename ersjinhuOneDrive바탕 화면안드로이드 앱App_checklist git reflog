@@ -1,0 +1,56 @@
+[33mdf3195b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32m1.3[m[33m, [m[1;31morigin/1.3[m[33m)[m HEAD@{0}: commit: feat: 마감 임박 알림과 오버레이 시간 설정 간소화
+[33m4b26e0e[m HEAD@{1}: commit: fix: 개인 계획 제목 통일 및 위젯 높이별 페이지 조절
+[33m131ace8[m HEAD@{2}: commit: chore: 빌드 캐시와 IDE 로컬 설정 추적 해제
+[33m5b20394[m HEAD@{3}: commit: feat: 개인 계획 모드와 전용 위젯 추가
+[33m319a0f1[m HEAD@{4}: commit: fix: 오버레이 복귀 감지와 홈 진행 탭 및 앱 목록 배치 개선
+[33m636abe4[m HEAD@{5}: commit: feat: 홈 대시보드와 이벤트별 시간 설정 및 오버레이 개선
+[33m509ca87[m HEAD@{6}: commit: feat: 위젯 데일리/위클리 탭 분리 및 오버레이 동작 개선
+[33mb955c49[m[33m ([m[1;32mclaude/overlay-dismiss-fix[m[33m)[m HEAD@{7}: commit: design: 위젯·오버레이 색상을 GitHub Dark 팔레트로 전환
+[33m145708b[m HEAD@{8}: commit: fix: values-night 테마에서 삭제된 색상 참조 제거
+[33m27e959e[m HEAD@{9}: commit: design: GitHub Dark 팔레트 적용 및 권한 다이얼로그 개선
+[33m563d11a[m HEAD@{10}: commit: fix: 위젯 레이아웃 고정 높이 전환 및 오버레이 버그 수정
+[33md8b0d4c[m HEAD@{11}: commit: feat: 바텀 네비게이션 구조로 전체 UI 재구성
+[33m26d0c29[m HEAD@{12}: commit: fix: 오버레이 숨김/표시 버그 재수정
+[33m64df466[m HEAD@{13}: commit: fix: 앱 나갔을 때 오버레이 미사라짐 버그 수정
+[33md179d55[m HEAD@{14}: commit: design: Blue 단일 팔레트로 전환 (teal+orange 제거)
+[33m6a48f05[m HEAD@{15}: checkout: moving from 1.3 to 1.3
+[33m6a48f05[m HEAD@{16}: commit: design: MD3 색상 시스템 + 전체 화면 재구성 (1.2 기반)
+[33m54f30ee[m[33m ([m[1;32m1.2[m[33m)[m HEAD@{17}: checkout: moving from 1.2 to 1.3
+[33m54f30ee[m[33m ([m[1;32m1.2[m[33m)[m HEAD@{18}: checkout: moving from 1.3 to 1.2
+[33m7b4b073[m HEAD@{19}: commit: design: Material Design 3 색상 시스템 및 컴포넌트 적용
+[33mcb445c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mclaude/dazzling-sinoussi-7d6e73[m[33m, [m[1;32mclaude/bold-hodgkin-b69a9c[m[33m)[m HEAD@{20}: checkout: moving from main to 1.3
+[33mcb445c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mclaude/dazzling-sinoussi-7d6e73[m[33m, [m[1;32mclaude/bold-hodgkin-b69a9c[m[33m)[m HEAD@{21}: checkout: moving from 1.2 to main
+[33m54f30ee[m[33m ([m[1;32m1.2[m[33m)[m HEAD@{22}: checkout: moving from main to 1.2
+[33mcb445c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mclaude/dazzling-sinoussi-7d6e73[m[33m, [m[1;32mclaude/bold-hodgkin-b69a9c[m[33m)[m HEAD@{23}: checkout: moving from 1.2 to main
+[33m54f30ee[m[33m ([m[1;32m1.2[m[33m)[m HEAD@{24}: checkout: moving from 1.3 to 1.2
+[33mf1e6207[m[33m ([m[1;32mclaude/musing-golick[m[33m)[m HEAD@{25}: checkout: moving from 1.2 to 1.3
+[33m54f30ee[m[33m ([m[1;32m1.2[m[33m)[m HEAD@{26}: commit: improve: UX 가이드라인 기반 UI 개선
+[33me93fb5b[m HEAD@{27}: commit: feat: 오버레이 헤더 드래그로 삭제 기능 추가
+[33m546e35a[m HEAD@{28}: commit: fix: 오버레이 코드 점검 및 버그 수정
+[33m7cad94a[m HEAD@{29}: commit: feat: long-press tab/overlay header to show delete zone
+[33m598b247[m HEAD@{30}: commit: feat: tab drag-down delete zone (replaces long-press)
+[33md46dc1a[m HEAD@{31}: commit: fix: 탭 닫기 후 상단바 조작 시 오버레이 재생성 방지
+[33m5a94956[m HEAD@{32}: commit: feat: 탭 롱프레스 후 아래로 드래그하면 오버레이 완전 닫기
+[33m8598520[m HEAD@{33}: commit: feat: 앱 복귀 시 오버레이 Daily 완료 상태 체크 반영
+[33macfeb43[m HEAD@{34}: commit: feat: 오버레이 Daily 태스크 전체 완료 시 위젯 체크 자동 연동
+[33m9dd43c4[m HEAD@{35}: commit: ui: 오버레이 시각적 개선 - 카테고리 헤더 컬러 밴드, 탭 스타일, 텍스트 밝기
+[33m4817b78[m HEAD@{36}: commit: fix: 게임 재진입 시 탭 사라지는 버그 수정
+[33m0bcf4fc[m HEAD@{37}: commit: ui: MD3 기준 UI 개선
+[33m934935d[m[33m ([m[1;32m1.1[m[33m)[m HEAD@{38}: checkout: moving from 1.1 to 1.2
+[33m934935d[m[33m ([m[1;32m1.1[m[33m)[m HEAD@{39}: commit: feat: 게임 오버레이 UI 개편 및 데일리 설정 텍스트 변경
+[33mf699cad[m[33m ([m[1;31morigin/1.1[m[33m)[m HEAD@{40}: commit: 위젯 정렬 업데이트 수정
+[33mdd36776[m HEAD@{41}: commit: feat: 위젯 정렬을 앱 내 정렬 설정과 동기화
+[33mb4dba16[m HEAD@{42}: commit: fix: 레이아웃 상단 여백 조정
+[33m826401c[m HEAD@{43}: commit: fix:전체 레이아웃 상단 여백 증가
+[33m4207b41[m HEAD@{44}: commit: fix: Space 가중치로 아이콘 수직 중앙 정렬
+[33m38855b6[m HEAD@{45}: checkout: moving from 1.1 to 1.1
+[33m38855b6[m HEAD@{46}: checkout: moving from 1.1 to 1.1
+[33m38855b6[m HEAD@{47}: commit: fix: 카드 고정 높이로 아이콘 수직 중앙 정렬
+[33m9c92778[m HEAD@{48}: commit: fix: 카드 아이콘 수직 중앙 정렬
+[33m251e6bc[m HEAD@{49}: commit: fix: 아이콘 둥근 모서리 및 상단 여백 조정
+[33m5331342[m[33m ([m[1;32mclaude/gallant-engelbart[m[33m)[m HEAD@{50}: checkout: moving from 1.1 to 1.1
+[33m5331342[m[33m ([m[1;32mclaude/gallant-engelbart[m[33m)[m HEAD@{51}: merge claude/gallant-engelbart: Fast-forward
+[33mcb445c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mclaude/dazzling-sinoussi-7d6e73[m[33m, [m[1;32mclaude/bold-hodgkin-b69a9c[m[33m)[m HEAD@{52}: checkout: moving from 1.1 to 1.1
+[33mcb445c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mclaude/dazzling-sinoussi-7d6e73[m[33m, [m[1;32mclaude/bold-hodgkin-b69a9c[m[33m)[m HEAD@{53}: checkout: moving from main to 1.1
+[33mcb445c4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m, [m[1;32mclaude/dazzling-sinoussi-7d6e73[m[33m, [m[1;32mclaude/bold-hodgkin-b69a9c[m[33m)[m HEAD@{54}: merge origin/main: Fast-forward
+[33m88dee6d[m HEAD@{55}: clone: from https://github.com/shin4shin/App_checklist.git
