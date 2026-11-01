@@ -85,8 +85,7 @@ object WidgetCollections {
         } else views.setViewVisibility(R.id.widgetIcon, View.GONE)
         if (!mini) {
             views.setTextViewText(R.id.widgetName, row.title)
-            views.setTextViewTextSize(R.id.widgetName, android.util.TypedValue.COMPLEX_UNIT_SP,
-                if (row.pkg != null) 20f else 14f)
+            views.setTextViewTextSize(R.id.widgetName, android.util.TypedValue.COMPLEX_UNIT_SP, 20f)
             views.setTextColor(R.id.widgetName, Color.parseColor(if (row.done) "#3FB950" else "#F0F6FC"))
             views.setTextViewText(R.id.widgetDetail, row.detail)
             val event = row.pkg != null && row.category == "Event"
