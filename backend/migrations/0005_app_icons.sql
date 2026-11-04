@@ -1,0 +1,1 @@
+ALTER TABLE user_settings ADD COLUMN app_icon TEXT NOT NULL DEFAULT '';

@@ -1,12 +1,26 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Roboto", "Noto Sans KR", "Noto Sans CJK KR", "Malgun Gothic", "Segoe UI", sans-serif;
+  --text-xs: 1rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 1.3;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.3;
+}
+
 @layer base {
   body {
     user-select: none;
     -webkit-user-select: none;
     background-color: transparent;
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
   }
 }
 
@@ -24,3 +38,4 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #58a6ff;
 }
+

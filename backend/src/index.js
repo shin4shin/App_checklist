@@ -1,3 +1,8 @@
+import { postgresDatabase } from './postgres-db.js';
+import { authenticateRequest } from './auth.js';
+import { handleAuthGoogle, handleSyncGet, handleSyncPost } from './sync.js';
+import { handleAuthDevice, handleGeneratePairingCode, handleVerifyPairingCode } from './pairing.js';
+
 export const SOURCES = {
   zzz: { name: '젠레스 존 제로', url: 'https://api.ennead.cc/mihoyo/zenless/calendar?lang=ko-kr' },
   hsr: { name: '붕괴: 스타레일', url: 'https://api.ennead.cc/mihoyo/starrail/calendar?lang=ko-kr' },
@@ -74,13 +79,83 @@ export async function collect(env, fetcher = fetch, now = Date.now()) {
 }
 
 function json(data, status = 200) {
-  return Response.json(data, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
+  return Response.json(data, {
+    status,
+    headers: {
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    },
+  });
 }
 
-export async function handle(request, env, now = Date.now()) {
-  if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+function corsOptionsResponse() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
+export async function handle(request, env, now = Date.now(), fetcher = fetch) {
+  if (request.method === 'OPTIONS') {
+    return corsOptionsResponse();
+  }
+
   const url = new URL(request.url);
+
+  if ((url.pathname.startsWith('/v1/auth/') || url.pathname === '/v1/sync') && !env.JWT_SECRET) {
+    return json({ error: 'Authentication unavailable' }, 503);
+  }
+
+  // Authentication endpoints
+  if (url.pathname === '/v1/auth/google') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+    return handleAuthGoogle(request, env, fetcher, now);
+  }
+
+  if (url.pathname === '/v1/auth/device') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+    return handleAuthDevice(request, env, now);
+  }
+
+  if (url.pathname === '/v1/auth/pair/code') {
+    // GET is accepted because Android HttpURLConnection can send GET for an empty POST.
+    if (request.method !== 'POST' && request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+    const user = await authenticateRequest(request, env, now);
+    if (!user) return json({ error: 'Unauthorized' }, 401);
+    return handleGeneratePairingCode(request, env, user, now);
+  }
+
+  if (url.pathname === '/v1/auth/pair/verify') {
+    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+    return handleVerifyPairingCode(request, env, now);
+  }
+
+  // Sync endpoints
+  if (url.pathname === '/v1/sync') {
+    const user = await authenticateRequest(request, env, now);
+    if (!user) return json({ error: 'Unauthorized' }, 401);
+
+    if (request.method === 'GET') {
+      return handleSyncGet(request, env, user, now);
+    }
+    if (request.method === 'POST') {
+      return handleSyncPost(request, env, user, now);
+    }
+    return json({ error: 'Method not allowed' }, 405);
+  }
+
+  // Public events & health endpoints
   if (url.pathname !== '/v1/events' && url.pathname !== '/health') return json({ error: 'Not found' }, 404);
+  if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+
   const game = url.searchParams.get('game');
   if (game && !Object.hasOwn(SOURCES, game)) return json({ error: 'game must be zzz or hsr' }, 400);
   const state = url.searchParams.get('status') || 'all';
@@ -108,8 +183,23 @@ export async function handle(request, env, now = Date.now()) {
 
 export default {
   async fetch(request, env) {
-    try { return await handle(request, env); }
+    const connectionString = env.HYPERDRIVE?.connectionString || env.SUPABASE_DATABASE_URL;
+    const cloudDatabase = connectionString && new URL(request.url).pathname.startsWith('/v1/') && !new URL(request.url).pathname.startsWith('/v1/events')
+      ? postgresDatabase(connectionString, Boolean(env.HYPERDRIVE)) : null;
+    if (cloudDatabase) env = { ...env, DB: cloudDatabase };
+    try {
+      const response = await handle(request, env);
+      const headers = new Headers(response.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    }
     catch (error) { console.error('API storage failure', error); return json({ error: 'Service unavailable' }, 503); }
+    finally { if (cloudDatabase) await cloudDatabase.close(); }
   },
   async scheduled(_controller, env) { console.log('Event sync', JSON.stringify(await collect(env))); },
 };
+
+
+

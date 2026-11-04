@@ -15,6 +15,7 @@ object EventDeadlineDialog {
         currentDeadline: Long,
         windowType: Int? = null,
         dialogTitle: String = "이벤트 시간 설정",
+        onRoutine: ((Long, Long) -> Unit)? = null,
         onSave: (Long?) -> Unit
     ): AlertDialog {
         val compact = windowType == android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
@@ -44,11 +45,9 @@ object EventDeadlineDialog {
         fun unchanged() = currentDeadline > 0 && days.value == initialDays && hours.value == initialHours
         fun duration() = days.value * 86_400_000L + hours.value * 3_600_000L
         val preview = content.findViewById<TextView>(R.id.eventDeadlinePreview)
-        val original = if (currentDeadline > 0) "현재 마감: ${EventDeadline.format(currentDeadline)}\n" else ""
-        preview.text = original + "일·시간을 돌려 남은 기간을 선택하세요."
         val dialog = builder.setTitle(dialogTitle).setView(content)
             .setNegativeButton("취소", null).setPositiveButton("저장", null)
-            .apply { if (currentDeadline > 0) setNeutralButton("마감 해제") { _, _ -> onSave(null) } }.create()
+            .apply { if (onRoutine != null) setNeutralButton("루틴", null) }.create()
         fun validate() {
             val duration = duration()
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = unchanged() || duration > 0
@@ -60,14 +59,20 @@ object EventDeadlineDialog {
                 }
                 return
             }
-            preview.text = if (unchanged()) original + "남은 시간: ${days.value}일 ${hours.value}시간\n변경 없이 저장하면 기존 마감을 유지합니다."
-                else if (duration == 0L) original + "1시간 이상 선택해 주세요."
-                else "${days.value}일 ${hours.value}시간 후\n예상 마감: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration))}\n분·초는 버리고 정각으로 저장합니다."
+            preview.visibility = if (unchanged()) android.view.View.GONE else android.view.View.VISIBLE
+            preview.text = if (duration == 0L) "1시간 이상 선택해 주세요."
+                else "예상 마감: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration))}"
         }
         days.setOnValueChangedListener { _, _, _ -> validate() }
         hours.setOnValueChangedListener { _, _, _ -> validate() }
         dialog.setOnShowListener {
             validate()
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
+                EventRoutine.showCalendar(context, currentDeadline, windowType) { deadline, period ->
+                    onRoutine?.invoke(deadline, period)
+                    dialog.dismiss()
+                }
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 days.clearFocus()
                 hours.clearFocus()

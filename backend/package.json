@@ -9,5 +9,10 @@
     "check": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy"
   },
-  "devDependencies": { "wrangler": "4.151.1" }
+  "devDependencies": {
+    "wrangler": "4.151.1"
+  },
+  "dependencies": {
+    "postgres": "^4.0.0"
+  }
 }

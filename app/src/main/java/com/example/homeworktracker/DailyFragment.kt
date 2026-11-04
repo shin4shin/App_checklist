@@ -359,28 +359,60 @@ class DailyFragment : Fragment() {
         val rvTasks   = dialogView.findViewById<RecyclerView>(R.id.rvTasks)
         val repository = TaskRepository(ctx)
         val currentTasks = repository.tasks(app.packageName, category).toMutableList()
+        val resetPrefs = ctx.getSharedPreferences("event_common_reset", Context.MODE_PRIVATE)
+        var commonMinute = resetPrefs.getInt(app.packageName, -1)
+        val selectedTasks = mutableSetOf<String>()
+        var selecting = false
+        val commonTime = dialogView.findViewById<Button>(R.id.eventCommonTime)
+        fun updateSelection() {
+            commonTime.text = if (commonMinute < 0) "공통 초기화 시간" else "공통 초기화 시간 ${EventResetTime.label(commonMinute)}"
+        }
         val taskAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             override fun getItemCount() = currentTasks.size
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
                 object : RecyclerView.ViewHolder(layoutInflater.inflate(R.layout.item_task_edit, parent, false)) {}
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                 val task = currentTasks[position]
+                holder.itemView.findViewById<android.widget.CheckBox>(R.id.eventTaskSelected).apply {
+                    visibility = if (category == "Event" && selecting) View.VISIBLE else View.GONE
+                    isChecked = task.id in selectedTasks
+                }
                 holder.itemView.findViewById<TextView>(R.id.tvTaskItem).text = task.title
                 holder.itemView.findViewById<TextView>(R.id.tvTaskDeadline).apply {
                     visibility = if (category == "Event") View.VISIBLE else View.GONE
-                    text = EventDeadline.label(task.deadline)
+                    text = EventDeadline.label(task.deadline) + if (task.resetMinute >= 0) " · ${EventResetTime.label(task.resetMinute)} 고정" else ""
                 }
                 if (category == "Event") holder.itemView.apply {
                     isClickable = true
                     isFocusable = true
-                    contentDescription = "${task.title} 시간 설정"
+                    contentDescription = if (selecting) "${task.title} 선택" else "${task.title} 시간 설정"
+                    setOnLongClickListener {
+                        selecting = true
+                        selectedTasks.add(task.id)
+                        updateSelection()
+                        notifyDataSetChanged()
+                        true
+                    }
                     setOnClickListener {
-                        EventDeadlineDialog.show(ctx, "${app.name} · ${task.title}\n목록에서 저장을 누르면 적용됩니다.", task.deadline) { duration ->
+                        if (selecting) {
+                            if (!selectedTasks.add(task.id)) selectedTasks.remove(task.id)
+                            updateSelection()
+                            notifyItemChanged(position)
+                            return@setOnClickListener
+                        }
+                        EventDeadlineDialog.show(ctx, "${app.name} · ${task.title}", task.deadline,
+                            onRoutine = { deadline, period ->
+                                val index = currentTasks.indexOfFirst { it.id == task.id }
+                                if (index >= 0) {
+                                    currentTasks[index] = EventResetTime.apply(currentTasks[index].copy(deadline = deadline, routineDays = period))
+                                    notifyItemChanged(index)
+                                }
+                            }) { duration ->
                             val index = currentTasks.indexOfFirst { it.id == task.id }
                             if (index >= 0) {
-                                currentTasks[index] = currentTasks[index].copy(deadline = duration?.let {
+                                currentTasks[index] = EventResetTime.apply(currentTasks[index].copy(deadline = duration?.let {
                                     EventDeadline.calculate(System.currentTimeMillis(), it)
-                                } ?: 0L)
+                                } ?: 0L, routineDays = if (currentTasks[index].resetMinute >= 0) currentTasks[index].routineDays else 0L))
                                 notifyItemChanged(index)
                             }
                         }
@@ -388,9 +420,32 @@ class DailyFragment : Fragment() {
                 }
                 holder.itemView.findViewById<TextView>(R.id.btnDeleteTask).setOnClickListener {
                     val pos = holder.bindingAdapterPosition
-                    if (pos != RecyclerView.NO_POSITION) { currentTasks.removeAt(pos); notifyItemRemoved(pos) }
+                    if (pos != RecyclerView.NO_POSITION) { selectedTasks.remove(currentTasks[pos].id); currentTasks.removeAt(pos); updateSelection(); notifyItemRemoved(pos) }
                 }
             }
+        }
+        if (category == "Event") {
+            dialogView.findViewById<View>(R.id.eventResetControls).visibility = View.VISIBLE
+            updateSelection()
+            commonTime.setOnClickListener {
+                val initial = commonMinute.takeIf { it >= 0 } ?: 0
+                val picker = layoutInflater.inflate(R.layout.dialog_common_reset_time, null) as android.widget.TimePicker
+                picker.setIs24HourView(true)
+                picker.hour = initial / 60
+                picker.minute = initial % 60
+                AlertDialog.Builder(ctx).setTitle("공통 초기화 시간").setView(picker)
+                    .setNegativeButton("취소", null)
+                    .setPositiveButton("설정") { _, _ ->
+                    picker.clearFocus()
+                    commonMinute = picker.hour * 60 + picker.minute
+                    currentTasks.indices.forEach { index ->
+                        if (currentTasks[index].resetMinute >= 0) currentTasks[index] = EventResetTime.apply(currentTasks[index].copy(resetMinute = commonMinute))
+                    }
+                    updateSelection()
+                    taskAdapter.notifyDataSetChanged()
+                }.show()
+            }
+
         }
         rvTasks.layoutManager = LinearLayoutManager(ctx)
         rvTasks.adapter = taskAdapter
@@ -401,10 +456,7 @@ class DailyFragment : Fragment() {
         val dialog = AlertDialog.Builder(ctx)
             .setTitle("${app.name} - 할 일 목록")
             .setView(dialogView)
-            .setPositiveButton("저장") { _, _ ->
-                repository.saveTasks(app.packageName, category, currentTasks)
-                adapter.notifyDataSetChanged()
-            }
+            .setPositiveButton("저장", null)
             .setNeutralButton(if (category == "Event") "가져오기" else if (repository.isDone(app.packageName, category)) "완료 취소" else "전체 완료") { _, _ ->
                 val done = !repository.isDone(app.packageName, category)
                 repository.saveTasks(app.packageName, category, currentTasks)
@@ -412,6 +464,31 @@ class DailyFragment : Fragment() {
             }
             .setNegativeButton("취소", null)
             .show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val wasSelecting = selecting
+            if (wasSelecting) {
+                if (selectedTasks.isNotEmpty() && commonMinute < 0) {
+                    Toast.makeText(ctx, "공통 초기화 시간을 먼저 설정해 주세요", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                currentTasks.indices.forEach { index ->
+                    if (currentTasks[index].id in selectedTasks) {
+                        currentTasks[index] = EventResetTime.apply(currentTasks[index].copy(resetMinute = commonMinute))
+                    }
+                }
+            }
+            if (category == "Event") resetPrefs.edit().putInt(app.packageName, commonMinute).apply()
+            repository.saveTasks(app.packageName, category, currentTasks)
+            adapter.notifyDataSetChanged()
+            if (wasSelecting) {
+                selecting = false
+                selectedTasks.clear()
+                currentTasks.clear()
+                currentTasks.addAll(repository.tasks(app.packageName, category))
+                updateSelection()
+                taskAdapter.notifyDataSetChanged()
+            } else dialog.dismiss()
+        }
         if (category == "Event") dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
             val game = EventImportClient.gameForPackage(app.packageName)
             if (game == null) {

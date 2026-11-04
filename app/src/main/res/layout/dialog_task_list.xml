@@ -11,6 +11,12 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp" />
 
+    <LinearLayout android:id="@+id/eventResetControls" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+        <Button android:id="@+id/eventCommonTime" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="공통 초기화 시간" />
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

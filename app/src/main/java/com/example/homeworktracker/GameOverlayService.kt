@@ -494,11 +494,16 @@ class GameOverlayService : AccessibilityService() {
             themed,
             task.title,
             task.deadline,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            onRoutine = { deadline, period ->
+                repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map {
+                    if (it.id == task.id) it.copy(deadline = deadline, routineDays = period) else it
+                })
+            }
         ) { duration ->
             val deadline = duration?.let { EventDeadline.calculate(System.currentTimeMillis(), it) } ?: 0L
             repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map {
-                if (it.id == task.id) it.copy(deadline = deadline) else it
+                if (it.id == task.id) it.copy(deadline = deadline, routineDays = if (it.resetMinute >= 0) it.routineDays else 0L) else it
             })
         }
         dialog.setOnDismissListener { isDialogShowing = false }

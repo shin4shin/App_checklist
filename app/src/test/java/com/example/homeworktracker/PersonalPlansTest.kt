@@ -73,7 +73,7 @@ class PersonalPlansTest {
         assertTrue(plans.plans().single().done)
         val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
         shadowOf(Looper.getMainLooper()).idle()
-        controller.get().findViewById<View>(R.id.homeModeSwitch).performClick()
+        controller.get().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_personal
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(PlannerMode.isPersonal(context))
         assertNotNull(controller.get().findViewById<View>(R.id.addPersonalPlan))
@@ -82,7 +82,7 @@ class PersonalPlansTest {
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(PlannerMode.isPersonal(context))
         assertNotNull(controller.get().findViewById<View>(R.id.addPersonalPlan))
-        controller.get().findViewById<View>(R.id.homeModeSwitch).performClick()
+        controller.get().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_home
         shadowOf(Looper.getMainLooper()).idle()
         assertFalse(PlannerMode.isPersonal(context))
         assertNotNull(controller.get().findViewById<View>(R.id.homeProgressTabs))
@@ -94,3 +94,4 @@ class PersonalPlansTest {
         controller.pause().stop().destroy()
     }
 }
+

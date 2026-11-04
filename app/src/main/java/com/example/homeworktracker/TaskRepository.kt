@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-data class TaskItem(val id: String = UUID.randomUUID().toString(), val title: String, val done: Boolean = false, val deadline: Long = 0L)
+data class TaskItem(val id: String = UUID.randomUUID().toString(), val title: String, val done: Boolean = false, val deadline: Long = 0L, val routineDays: Long = 0L, val resetMinute: Int = -1)
 
 /** One source of truth for membership, stable task IDs and completion on every surface. */
 class TaskRepository(context: Context) {
@@ -83,13 +83,13 @@ class TaskRepository(context: Context) {
     private fun root() = JSONObject(prefs.getString("data", "{}")!!)
     private fun encode(items: List<TaskItem>, emptyDone: Boolean = false): JSONObject = JSONObject()
         .put("emptyDone", emptyDone).put("tasks", JSONArray().apply {
-            items.forEach { put(JSONObject().put("id", it.id).put("title", it.title).put("done", it.done).put("deadline", it.deadline)) }
+            items.forEach { put(JSONObject().put("id", it.id).put("title", it.title).put("done", it.done).put("deadline", it.deadline).put("routineDays", it.routineDays).put("resetMinute", it.resetMinute)) }
         })
 
     private fun decode(group: JSONObject?): List<TaskItem> {
         val array = group?.optJSONArray("tasks") ?: return emptyList()
         return (0 until array.length()).map { i -> array.getJSONObject(i).let {
-            TaskItem(it.getString("id"), it.getString("title"), it.optBoolean("done"), it.optLong("deadline"))
+            TaskItem(it.getString("id"), it.getString("title"), it.optBoolean("done"), it.optLong("deadline"), it.optLong("routineDays"), it.optInt("resetMinute", -1))
         } }
     }
 
@@ -157,10 +157,26 @@ class TaskRepository(context: Context) {
             val app = root.optJSONObject(pkg) ?: return@change
             if (!app.has(category)) return@change
             val latest = decode(app.optJSONObject(category)).associateBy { it.id }
-            app.put(category, encode(items.map { it.copy(done = latest[it.id]?.done ?: false) }))
+            app.put(category, encode(items.map { EventResetTime.apply(it.copy(done = latest[it.id]?.done ?: false)) }))
         }
 
         if (category == "Event") ResetScheduler.schedule(context, pkg, category)
+    }
+
+    fun importTasks(pkg: String, category: String, items: List<TaskItem>) {
+        change(pkg) { root ->
+            val app = root.optJSONObject(pkg) ?: JSONObject().also { root.put(pkg, it) }
+            app.put(category, encode(items.map { EventResetTime.apply(it) }))
+        }
+        if (category == "Event") ResetScheduler.schedule(context, pkg, category)
+    }
+
+    fun advanceRoutines(pkg: String, now: Long = System.currentTimeMillis()) {
+        if (tasks(pkg, "Event").none { it.routineDays > 0 && it.deadline in 1..now }) return
+        change(pkg) { root ->
+            val app = root.optJSONObject(pkg) ?: return@change
+            app.put("Event", encode(decode(app.optJSONObject("Event")).map { EventRoutine.advance(it, now) }))
+        }
     }
 
     fun setTaskDone(pkg: String, category: String, id: String, done: Boolean) = change(pkg) { root ->

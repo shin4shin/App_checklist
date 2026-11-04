@@ -5,9 +5,8 @@ description = "Daily Check Desktop Floating Widget"
 authors = ["Daily Check"]
 edition = "2021"
 
-[lib]
-name = "daily_check_widget_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+[features]
+custom-protocol = ["tauri/custom-protocol"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

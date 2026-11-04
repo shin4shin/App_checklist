@@ -9,6 +9,9 @@
     android:paddingStart="4dp"
     android:paddingEnd="4dp">
 
+    <CheckBox android:id="@+id/eventTaskSelected" android:layout_width="48dp"
+        android:layout_height="48dp" android:visibility="gone" android:clickable="false" android:focusable="false"
+        android:importantForAccessibility="no" />
     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
         android:layout_weight="1" android:paddingVertical="8dp" android:orientation="vertical">
         <TextView android:id="@+id/tvTaskItem"

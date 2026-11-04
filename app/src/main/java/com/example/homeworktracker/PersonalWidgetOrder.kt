@@ -11,19 +11,26 @@ import android.os.Build
 object PersonalWidgetOrder {
     const val DELAY = 5 * 60_000L
     private fun prefs(context: Context) = context.getSharedPreferences("personal_widget_order", 0)
+    fun forget(context: Context, id: String) {
+        prefs(context).edit().remove(id).remove("rank_$id").remove("sort_$id").apply()
+    }
 
     fun record(context: Context, id: String, done: Boolean) {
-        prefs(context).edit().apply {
-            if (done) putLong(id, System.currentTimeMillis()) else remove(id)
-        }.apply()
+        val times = prefs(context)
+        val now = System.currentTimeMillis()
+        val previousTime = times.getLong(id, 0L)
+        val previousRank = if (now < previousTime + DELAY) times.getBoolean("rank_$id", false) else !done
+        val sortTime = if (previousRank) times.getLong("sort_$id", previousTime) else now
+        times.edit().putLong(id, now).putLong("sort_$id", sortTime).putBoolean("rank_$id", previousRank).apply()
     }
 
     fun plans(context: Context, now: Long = System.currentTimeMillis()): List<TaskItem> {
         val times = prefs(context)
-        fun moved(item: TaskItem) = item.done && now >= times.getLong(item.id, 0L) + DELAY
+        fun moved(item: TaskItem) = if (now < times.getLong(item.id, 0L) + DELAY)
+            times.getBoolean("rank_${item.id}", false) else item.done
         return PersonalPlanRepository(context).plans().sortedWith(
             compareBy<TaskItem> { moved(it) }
-                .thenBy { if (moved(it)) times.getLong(it.id, 0L) else if (it.deadline > 0) it.deadline else Long.MAX_VALUE }
+                .thenBy { if (moved(it)) times.getLong("sort_${it.id}", times.getLong(it.id, 0L)) else if (it.deadline > 0) it.deadline else Long.MAX_VALUE }
                 .thenBy { it.title })
     }
 
@@ -36,7 +43,8 @@ object PersonalWidgetOrder {
         if (AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, PersonalWidget::class.java)).isEmpty()) return
         val now = System.currentTimeMillis()
         val times = prefs(context)
-        val next = PersonalPlanRepository(context).plans().filter { it.done }
+        val next = PersonalPlanRepository(context).plans()
+            .filter { times.getBoolean("rank_${it.id}", false) != it.done }
             .map { times.getLong(it.id, 0L) + DELAY }.filter { it > now }.minOrNull() ?: return
         if (Build.VERSION.SDK_INT < 31 || alarm.canScheduleExactAlarms()) {
             try { alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pending) }

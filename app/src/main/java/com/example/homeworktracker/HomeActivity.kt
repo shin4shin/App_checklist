@@ -44,7 +44,7 @@ class HomeActivity : AppCompatActivity() {
 
         val navigation = findViewById<BottomNavigationView>(R.id.bottomNav)
         applyModeNavigation()
-        if (PlannerMode.isPersonal(this) && currentNavId !in listOf(R.id.nav_home, R.id.nav_more)) currentNavId = R.id.nav_home
+        if (savedInstanceState == null && PlannerMode.isPersonal(this)) currentNavId = R.id.nav_personal
         navigation.selectedItemId = currentNavId
 
         if (savedInstanceState == null) {
@@ -59,6 +59,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         findViewById<BottomNavigationView>(R.id.bottomNav).setOnItemSelectedListener { item ->
+            PlannerMode.setPersonal(this, item.itemId == R.id.nav_personal)
             currentNavId = item.itemId
             showFragment(item.itemId)
             true
@@ -71,7 +72,7 @@ class HomeActivity : AppCompatActivity() {
         applyNotificationTarget(intent)
         applyModeNavigation()
         findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId =
-            if (PlannerMode.isPersonal(this)) R.id.nav_home else navForCategory(intent.getStringExtra("category"))
+            if (PlannerMode.isPersonal(this)) R.id.nav_personal else navForCategory(intent.getStringExtra("category"))
         if (intent.action == "com.example.homeworktracker.HOMEWORK_DONE") showDonePicker()
     }
 
@@ -150,7 +151,7 @@ class HomeActivity : AppCompatActivity() {
     private fun applyModeNavigation() {
         val menu = findViewById<BottomNavigationView>(R.id.bottomNav).menu
         for (id in listOf(R.id.nav_daily, R.id.nav_weekly, R.id.nav_monthly)) {
-            menu.findItem(id).isVisible = !PlannerMode.isPersonal(this)
+            menu.findItem(id).isVisible = true
         }
     }
 
@@ -165,7 +166,8 @@ class HomeActivity : AppCompatActivity() {
 
     private fun showFragment(navId: Int) {
         (supportFragmentManager.findFragmentById(R.id.fragmentContainer) as? DailyFragment)?.persistDraft()
-        val fragment: Fragment = if (PlannerMode.isPersonal(this) && navId != R.id.nav_more) PersonalPlansFragment() else when (navId) {
+        val fragment: Fragment = when (navId) {
+            R.id.nav_personal -> PersonalPlansFragment()
             R.id.nav_home     -> HomeFragment()
             R.id.nav_daily    -> DailyFragment.newInstance("Daily")
             R.id.nav_weekly   -> DailyFragment.newInstance("Weekly")
@@ -178,3 +180,4 @@ class HomeActivity : AppCompatActivity() {
             .commit()
     }
 }
+

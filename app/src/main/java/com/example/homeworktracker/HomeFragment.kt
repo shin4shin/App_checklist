@@ -191,7 +191,7 @@ class HomeFragment : Fragment() {
         inflater.inflate(R.layout.fragment_home, container, false)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.findViewById<View>(R.id.homeModeSwitch).setOnClickListener { (requireActivity() as HomeActivity).switchPlannerMode() }
+        view.findViewById<View>(R.id.homeModeSwitch).visibility = View.GONE
         selectedCategory = savedInstanceState?.getString("progressCategory") ?: selectedCategory
         expiredExpanded = savedInstanceState?.getBoolean("expiredExpanded") ?: expiredExpanded
         val tabs = view.findViewById<com.google.android.material.tabs.TabLayout>(R.id.homeProgressTabs)
@@ -209,3 +209,4 @@ class HomeFragment : Fragment() {
         view.findViewById<View>(R.id.homeExpiredToggle).setOnClickListener { expiredExpanded = !expiredExpanded; updateSummary() }
     }
 }
+

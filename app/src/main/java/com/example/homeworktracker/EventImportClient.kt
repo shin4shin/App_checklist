@@ -49,7 +49,7 @@ object EventImportClient {
         incoming.forEach { event ->
             val index = result.indexOfFirst { it.id == event.id }
             if (index < 0) result.add(event)
-            else result[index] = event.copy(done = result[index].done)
+            else result[index] = EventResetTime.apply(event.copy(done = result[index].done, routineDays = result[index].routineDays, resetMinute = result[index].resetMinute))
         }
         return result
     }

@@ -3,7 +3,7 @@
  android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="?attr/colorSurface">
  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="36dp" android:orientation="horizontal" android:gravity="center_vertical">
-   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="오늘의 체크" android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" android:textColor="?attr/colorOnSurface" />
+   <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="오늘의 할 일 목록" android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" android:textColor="?attr/colorOnSurface" />
    <ImageButton android:id="@+id/homeModeSwitch" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_switch_mode" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="개인 계획 모드로 전환" app:tint="?attr/colorOnSurface" />
   </LinearLayout>
   <TextView android:id="@+id/tvTodayDate" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="?attr/colorOnSurfaceVariant" />

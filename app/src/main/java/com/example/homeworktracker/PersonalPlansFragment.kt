@@ -26,7 +26,7 @@ class PersonalPlansFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_personal_plans, container, false)
     override fun onViewCreated(view: View, state: Bundle?) {
-        view.findViewById<View>(R.id.homeModeSwitch).setOnClickListener { (requireActivity() as HomeActivity).switchPlannerMode() }
+        view.findViewById<View>(R.id.homeModeSwitch).visibility = View.GONE
         view.findViewById<View>(R.id.addPersonalPlan).setOnClickListener { editPlan(null) }
     }
     override fun onResume() { super.onResume(); handler.post(refresh) }
@@ -40,8 +40,7 @@ class PersonalPlansFragment : Fragment() {
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
     private fun render() {
         val root = view ?: return
-        val plans = PersonalPlanRepository(requireContext()).plans().sortedWith(
-            compareBy<TaskItem> { it.done }.thenBy { if (it.deadline > 0) it.deadline else Long.MAX_VALUE }.thenBy { it.title })
+        val plans = PersonalWidgetOrder.plans(requireContext())
         root.findViewById<TextView>(R.id.personalSummary).text = "전체 ${plans.size}개 · 완료 ${plans.count { it.done }}개"
         if (shown == plans) {
             plans.forEach { deadlines[it.id]?.text = EventDeadline.label(it.deadline) }
@@ -126,3 +125,5 @@ class PersonalPlansFragment : Fragment() {
         dialog.show()
     }
 }
+
+

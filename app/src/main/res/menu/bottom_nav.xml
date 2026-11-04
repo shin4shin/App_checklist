@@ -16,8 +16,10 @@
         android:id="@+id/nav_monthly"
         android:icon="@drawable/ic_nav_monthly"
         android:title="이벤트" />
-    <item
-        android:id="@+id/nav_more"
+    <item android:id="@+id/nav_personal" android:icon="@drawable/ic_nav_personal" android:title="일정" />
+    <item android:id="@+id/nav_more"
         android:icon="@drawable/ic_nav_more"
         android:title="더보기" />
 </menu>
+
+

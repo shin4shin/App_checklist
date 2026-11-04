@@ -17,6 +17,20 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class PersonalWidgetTest {
+    @Test fun uncheckingKeepsCompletedPositionUntilDelayExpires() {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("personal_plans", 0).edit().clear().commit()
+        context.getSharedPreferences("personal_widget_order", 0).edit().clear().commit()
+        val repo = PersonalPlanRepository(context)
+        repo.save(TaskItem(id = "early", title = "Early", deadline = 1000L))
+        repo.save(TaskItem(id = "later", title = "Later", deadline = 2000L))
+        repo.setDone("early", true)
+        context.getSharedPreferences("personal_widget_order", 0).edit()
+            .putLong("early", System.currentTimeMillis() - PersonalWidgetOrder.DELAY - 1).commit()
+        repo.setDone("early", false)
+        assertEquals(listOf("later", "early"), PersonalWidgetOrder.plans(context).map { it.id })
+        assertEquals(listOf("early", "later"), PersonalWidgetOrder.plans(context, System.currentTimeMillis() + PersonalWidgetOrder.DELAY + 1).map { it.id })
+    }
     @Test fun resizingKeepsEveryPlanInScrollableCollection() {
         val context = RuntimeEnvironment.getApplication()
         val repo = PersonalPlanRepository(context)
@@ -81,3 +95,4 @@ class PersonalWidgetTest {
         })
     }
 }
+

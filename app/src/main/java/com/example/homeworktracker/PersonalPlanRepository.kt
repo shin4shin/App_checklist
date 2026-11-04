@@ -41,7 +41,7 @@ class PersonalPlanRepository(context: Context) {
         } else it
     } }
     fun delete(id: String) = change { items ->
-        PersonalWidgetOrder.record(context, id, false)
+        PersonalWidgetOrder.forget(context, id)
         items.filterNot { it.id == id }
     }
 }
