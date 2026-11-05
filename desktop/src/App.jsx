@@ -65,6 +65,9 @@ export default function App() {
   const [editTitle, setEditTitle] = useState('');
   const [editTime, setEditTime] = useState('');
   const [originalEditTime, setOriginalEditTime] = useState('');
+  const [editDays, setEditDays] = useState(0);
+  const [editHours, setEditHours] = useState(0);
+  const [originalEditHours, setOriginalEditHours] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
@@ -302,12 +305,22 @@ export default function App() {
     setEditTitle(task.title);
     setEditTime(time);
     setOriginalEditTime(time);
+    const remainingHours = Math.floor(Math.max(0, (task.deadline || 0) - Date.now()) / 3600000);
+    setEditDays(Math.floor(remainingHours / 24));
+    setEditHours(remainingHours % 24);
+    setOriginalEditHours(remainingHours);
   };
   const saveEdit = event => {
     event.preventDefault();
     if (!editTitle.trim() || !editingTask) return;
     let deadline = editingTask.deadline;
-    if (editTime !== originalEditTime) {
+    if (editingTask.category === 'Event' && editDays * 24 + editHours !== originalEditHours) {
+      if (editDays * 24 + editHours <= 0) return;
+      const date = new Date(Date.now() + (editDays * 24 + editHours) * 3600000);
+      date.setMinutes(0, 0, 0);
+      if (editingTask.resetMinute >= 0) date.setHours(Math.floor(editingTask.resetMinute / 60), editingTask.resetMinute % 60, 0, 0);
+      deadline = date.getTime();
+    } else if (editingTask.category === 'Personal' && editTime !== originalEditTime) {
       const date = editTime ? new Date(editTime) : null;
       if (date && !Number.isFinite(date.getTime())) return;
       if (date && editingTask.category !== 'Personal' && editingTask.resetMinute >= 0) date.setHours(Math.floor(editingTask.resetMinute / 60), editingTask.resetMinute % 60, 0, 0);
@@ -923,14 +936,23 @@ export default function App() {
             <label className="block text-[12px]">제목
               <input autoFocus required value={editTitle} onChange={event => setEditTitle(event.target.value)} className="block w-full mt-1 rounded-lg bg-[#21262d] border border-[#30363d] px-3 py-2 text-xs" />
             </label>
-            {['Event', 'Personal'].includes(editingTask.category) && (
+            {editingTask.category === 'Personal' && (
               <label className="block text-[12px]">시간 설정
                 <DateTimePicker value={editTime} onChange={setEditTime} />
               </label>
             )}
+            {editingTask.category === 'Event' && (
+              <div className="space-y-2 text-[12px] text-[#8b949e]">
+                <span>시간 설정</span>
+                <div className="flex items-center gap-2">
+                  <TimeNumberInput label="남은 일" max={3650} value={editDays} onChange={setEditDays} /><span>일</span>
+                  <TimeNumberInput label="남은 시간" max={23} value={editHours} onChange={setEditHours} /><span>시간 후</span>
+                </div>
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setEditingTask(null)} className="px-3 py-2 text-xs">취소</button>
-              <button type="submit" disabled={!editTitle.trim()} className="rounded-lg bg-[#2f81f7] px-3 py-2 text-xs disabled:opacity-40">저장</button>
+              <button type="submit" disabled={!editTitle.trim() || (editingTask.category === 'Event' && editDays * 24 + editHours === 0 && (!(editingTask.deadline > 0) || originalEditHours !== 0))} className="rounded-lg bg-[#2f81f7] px-3 py-2 text-xs disabled:opacity-40">저장</button>
             </div>
           </form>
         </div>
