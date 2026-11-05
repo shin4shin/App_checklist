@@ -310,7 +310,7 @@ export default function App() {
     if (editTime !== originalEditTime) {
       const date = editTime ? new Date(editTime) : null;
       if (date && !Number.isFinite(date.getTime())) return;
-      if (date && editingTask.resetMinute >= 0) date.setHours(Math.floor(editingTask.resetMinute / 60), editingTask.resetMinute % 60, 0, 0);
+      if (date && editingTask.category !== 'Personal' && editingTask.resetMinute >= 0) date.setHours(Math.floor(editingTask.resetMinute / 60), editingTask.resetMinute % 60, 0, 0);
       deadline = date?.getTime() || 0;
     }
     setTasks(previous => previous.map(task => task.packageName === editingTask.packageName && task.category === editingTask.category && task.taskId === editingTask.taskId
