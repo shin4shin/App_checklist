@@ -46,7 +46,6 @@ class MoreFragment : Fragment() {
         val syncManager = SyncManager(ctx)
         val tvTitle = view.findViewById<TextView>(R.id.tvSyncAccountTitle)
         val tvStatus = view.findViewById<TextView>(R.id.tvSyncAccountStatus)
-        val icon = view.findViewById<TextView>(R.id.iconCloudSync)
         val btnAction = view.findViewById<MaterialButton>(R.id.btnSyncAction)
         val layoutDetails = view.findViewById<View>(R.id.layoutSyncDetails)
         val tvLastSync = view.findViewById<TextView>(R.id.tvLastSyncTime)

@@ -224,7 +224,7 @@ class ChecklistRegressionTest {
         activity.findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_weekly
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals("위클리 설정", activity.findViewById<MaterialToolbar>(R.id.toolbar).title)
-        assertNotNull(activity.findViewById<MaterialToolbar>(R.id.toolbar).logo)
+        assertNull(activity.findViewById<MaterialToolbar>(R.id.toolbar).logo)
         activity.findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_monthly
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals("이벤트 설정", activity.findViewById<MaterialToolbar>(R.id.toolbar).title)

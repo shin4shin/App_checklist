@@ -26,7 +26,12 @@ class PersonalPlansFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_personal_plans, container, false)
     override fun onViewCreated(view: View, state: Bundle?) {
-        view.findViewById<View>(R.id.homeModeSwitch).visibility = View.GONE
+        view.findViewById<View>(R.id.personalMenu).setOnClickListener { anchor ->
+            android.widget.PopupMenu(requireContext(), anchor).apply {
+                menu.add("계획 추가").setOnMenuItemClickListener { editPlan(null); true }
+                show()
+            }
+        }
         view.findViewById<View>(R.id.addPersonalPlan).setOnClickListener { editPlan(null) }
     }
     override fun onResume() { super.onResume(); handler.post(refresh) }

@@ -68,8 +68,6 @@ class DailyFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         toolbar.title = when (category) { "Weekly" -> "위클리 설정"; "Event" -> "이벤트 설정"; else -> "데일리 설정" }
-        toolbar.setLogo(when (category) { "Weekly" -> R.drawable.ic_nav_weekly; "Event" -> R.drawable.ic_nav_monthly; else -> R.drawable.ic_nav_daily })
-        toolbar.logoDescription = toolbar.title
         setupRecyclerView(view)
         setupFab(view)
         setupMenu(view)
