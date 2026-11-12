@@ -4,6 +4,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class EventDurationTest {
+    @Test fun futureDateUsesResetTimeEvenWhenHoursCrossMidnight() {
+        val start = java.util.Calendar.getInstance().apply {
+            clear()
+            set(2026, 10, 5, 16, 37)
+        }
+        for ((hours, day) in listOf(8 to 6, 24 to 6, 26 to 6, 32 to 7)) {
+            val expected = (start.clone() as java.util.Calendar).apply { set(2026, 10, day, 4, 15) }
+            assertEquals(expected.timeInMillis, EventDeadline.calculate(start.timeInMillis, hours * 3_600_000L, 255))
+        }
+    }
+
     @Test fun deadlineAlwaysTruncatesMinutesWithoutRoundingUp() {
         for (minute in listOf(0, 29, 30, 59)) {
             val now = java.util.Calendar.getInstance().apply {

@@ -16,6 +16,8 @@ object EventDeadlineDialog {
         windowType: Int? = null,
         dialogTitle: String = "이벤트 시간 설정",
         onRoutine: ((Long, Long) -> Unit)? = null,
+        resetMinute: Int = 240,
+        fixed: Boolean = false,
         onSave: (Long?) -> Unit
     ): AlertDialog {
         val compact = windowType == android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
@@ -55,13 +57,13 @@ object EventDeadlineDialog {
                 preview.text = when {
                     unchanged() -> "${EventDeadline.format(currentDeadline, includeYear = false)} 마감\n남은 시간 ${days.value}일 ${hours.value}시간"
                     duration == 0L -> "1시간 이상 선택해 주세요."
-                    else -> "${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration), includeYear = false)} 마감\n분·초는 버리고 저장합니다."
+                    else -> "${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration, resetMinute, fixed), includeYear = false)} 마감"
                 }
                 return
             }
             preview.visibility = if (unchanged()) android.view.View.GONE else android.view.View.VISIBLE
             preview.text = if (duration == 0L) "1시간 이상 선택해 주세요."
-                else "예상 마감: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration))}"
+                else "예상 마감: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration, resetMinute, fixed))}"
         }
         days.setOnValueChangedListener { _, _, _ -> validate() }
         hours.setOnValueChangedListener { _, _, _ -> validate() }

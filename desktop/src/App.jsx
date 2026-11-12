@@ -20,6 +20,7 @@ import {
 import { syncApi } from './services/api';
 import { shouldApplyRemote } from './services/sync-merge';
 import DateTimePicker from './DateTimePicker';
+import { eventDeadline } from './services/event-deadline';
 import TimeNumberInput from './TimeNumberInput';
 
 const DEFAULT_TASKS = [];
@@ -68,6 +69,7 @@ export default function App() {
   const [editDays, setEditDays] = useState(0);
   const [editHours, setEditHours] = useState(0);
   const [originalEditHours, setOriginalEditHours] = useState(0);
+  const [eventDurationEdited, setEventDurationEdited] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
@@ -309,17 +311,18 @@ export default function App() {
     setEditDays(Math.floor(remainingHours / 24));
     setEditHours(remainingHours % 24);
     setOriginalEditHours(remainingHours);
+    setEventDurationEdited(false);
   };
   const saveEdit = event => {
     event.preventDefault();
     if (!editTitle.trim() || !editingTask) return;
     let deadline = editingTask.deadline;
-    if (editingTask.category === 'Event' && editDays * 24 + editHours !== originalEditHours) {
+    if (editingTask.category === 'Event' && eventDurationEdited) {
       if (editDays * 24 + editHours <= 0) return;
-      const date = new Date(Date.now() + (editDays * 24 + editHours) * 3600000);
-      date.setMinutes(0, 0, 0);
-      if (editingTask.resetMinute >= 0) date.setHours(Math.floor(editingTask.resetMinute / 60), editingTask.resetMinute % 60, 0, 0);
-      deadline = date.getTime();
+      const setting = appSettings.find(item => item.packageName === editingTask.packageName);
+      const resetMinute = editingTask.resetMinute != null && editingTask.resetMinute >= 0
+        ? editingTask.resetMinute : setting?.dailyResetMinute ?? 240;
+      deadline = eventDeadline(Date.now(), editDays, editHours, resetMinute);
     } else if (editingTask.category === 'Personal' && editTime !== originalEditTime) {
       const date = editTime ? new Date(editTime) : null;
       if (date && !Number.isFinite(date.getTime())) return;
@@ -345,7 +348,7 @@ export default function App() {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
     const deadline = addCategory === 'Personal' && newTaskTime ? new Date(newTaskTime).getTime()
-      : addCategory === 'Event' && (addDays || addHours) ? Math.floor((Date.now() + (addDays * 24 + addHours) * 3600000) / 3600000) * 3600000 : 0;
+      : addCategory === 'Event' && (addDays || addHours) ? eventDeadline(Date.now(), addDays, addHours, addResetMinute) : 0;
     if (!Number.isFinite(deadline)) return;
     if (addCategory === 'Daily' || addCategory === 'Weekly') {
       const setting = { dailyResetMinute: 240, weeklyResetMinute: 240, weeklyResetDay: 2,
@@ -945,8 +948,8 @@ export default function App() {
               <div className="space-y-2 text-[12px] text-[#8b949e]">
                 <span>시간 설정</span>
                 <div className="flex items-center gap-2">
-                  <TimeNumberInput label="남은 일" max={3650} value={editDays} onChange={setEditDays} /><span>일</span>
-                  <TimeNumberInput label="남은 시간" max={23} value={editHours} onChange={setEditHours} /><span>시간 후</span>
+                  <TimeNumberInput label="남은 일" max={3650} value={editDays} onChange={days => { setEditDays(days); setEventDurationEdited(true); }} /><span>일</span>
+                  <TimeNumberInput label="남은 시간" max={23} value={editHours} onChange={hours => { setEditHours(hours); setEventDurationEdited(true); }} /><span>시간 후</span>
                 </div>
               </div>
             )}

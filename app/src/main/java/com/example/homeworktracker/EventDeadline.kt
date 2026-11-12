@@ -31,19 +31,38 @@ object EventDeadline {
         return tasks.isNotEmpty() && tasks.all { it.deadline in 1..now }
     }
 
-    fun calculate(now: Long, duration: Long): Long {
-        val target = Math.addExact(now, duration)
-        val calendar = Calendar.getInstance().apply { timeInMillis = target }
-        return target - calendar.get(Calendar.MINUTE) * 60_000L -
-            calendar.get(Calendar.SECOND) * 1_000L - calendar.get(Calendar.MILLISECOND)
+    fun resetMinute(context: Context, pkg: String, common: Int = context
+        .getSharedPreferences("event_common_reset", Context.MODE_PRIVATE).getInt(pkg, -1)): Int {
+        if (common in 0..1439) return common
+        val prefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
+        return prefs.getInt("${pkg}_Daily_hour", 4) * 60 + prefs.getInt("${pkg}_Daily_minute", 0)
+    }
+
+    fun calculate(now: Long, duration: Long, resetMinute: Int = 240, fixed: Boolean = false): Long {
+        val start = Calendar.getInstance().apply { timeInMillis = now }
+        val target = (start.clone() as Calendar).apply {
+            add(Calendar.DATE, (duration / 86_400_000L).toInt())
+            timeInMillis += duration % 86_400_000L
+        }
+        if (fixed || start.get(Calendar.YEAR) != target.get(Calendar.YEAR) ||
+            start.get(Calendar.DAY_OF_YEAR) != target.get(Calendar.DAY_OF_YEAR)) {
+            target.set(Calendar.HOUR_OF_DAY, resetMinute / 60)
+            target.set(Calendar.MINUTE, resetMinute % 60)
+        } else target.set(Calendar.MINUTE, 0)
+        target.set(Calendar.SECOND, 0)
+        target.set(Calendar.MILLISECOND, 0)
+        return target.timeInMillis
     }
 
     fun save(context: Context, packages: List<String>, duration: Long?, now: Long = System.currentTimeMillis()) {
-        val deadline = duration?.let { calculate(now, it) }
         val repository = TaskRepository(context)
         val valid = repository.packages("Event")
         for (pkg in packages.filter { it in valid }) {
-            repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map { it.copy(deadline = deadline ?: 0L) })
+            val common = resetMinute(context, pkg)
+            repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map { task ->
+                val minute = task.resetMinute.takeIf { it >= 0 } ?: common
+                task.copy(deadline = duration?.let { calculate(now, it, minute, task.resetMinute >= 0) } ?: 0L)
+            })
         }
     }
 

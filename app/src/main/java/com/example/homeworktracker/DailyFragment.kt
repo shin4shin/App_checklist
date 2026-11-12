@@ -398,7 +398,9 @@ class DailyFragment : Fragment() {
                             notifyItemChanged(position)
                             return@setOnClickListener
                         }
+                        val minute = task.resetMinute.takeIf { it >= 0 } ?: EventDeadline.resetMinute(ctx, app.packageName, commonMinute)
                         EventDeadlineDialog.show(ctx, "${app.name} · ${task.title}", task.deadline,
+                            resetMinute = minute, fixed = task.resetMinute >= 0,
                             onRoutine = { deadline, period ->
                                 val index = currentTasks.indexOfFirst { it.id == task.id }
                                 if (index >= 0) {
@@ -409,7 +411,7 @@ class DailyFragment : Fragment() {
                             val index = currentTasks.indexOfFirst { it.id == task.id }
                             if (index >= 0) {
                                 currentTasks[index] = EventResetTime.apply(currentTasks[index].copy(deadline = duration?.let {
-                                    EventDeadline.calculate(System.currentTimeMillis(), it)
+                                    EventDeadline.calculate(System.currentTimeMillis(), it, minute, task.resetMinute >= 0)
                                 } ?: 0L, routineDays = if (currentTasks[index].resetMinute >= 0) currentTasks[index].routineDays else 0L))
                                 notifyItemChanged(index)
                             }

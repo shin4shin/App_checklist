@@ -202,7 +202,8 @@ class AppAdapter(
     }
 
     private fun showEventEditor(packages: List<String>, target: String) {
-        EventDeadlineDialog.show(context, "$target · 모든 이벤트에 적용", EventDeadline.get(context, packages.first())) { duration ->
+        EventDeadlineDialog.show(context, "$target · 모든 이벤트에 적용", EventDeadline.get(context, packages.first()),
+            resetMinute = EventDeadline.resetMinute(context, packages.first())) { duration ->
             EventDeadline.save(context, packages, duration)
             refreshSort()
             notifyDataSetChanged()

@@ -490,18 +490,20 @@ class GameOverlayService : AccessibilityService() {
         val themed = android.view.ContextThemeWrapper(this, R.style.Theme_HomeworkTracker)
         val repository = TaskRepository(this)
         isDialogShowing = true
+        val minute = task.resetMinute.takeIf { it >= 0 } ?: EventDeadline.resetMinute(this, pkg)
         val dialog = EventDeadlineDialog.show(
             themed,
             task.title,
             task.deadline,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            resetMinute = minute, fixed = task.resetMinute >= 0,
             onRoutine = { deadline, period ->
                 repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map {
                     if (it.id == task.id) it.copy(deadline = deadline, routineDays = period) else it
                 })
             }
         ) { duration ->
-            val deadline = duration?.let { EventDeadline.calculate(System.currentTimeMillis(), it) } ?: 0L
+            val deadline = duration?.let { EventDeadline.calculate(System.currentTimeMillis(), it, minute, task.resetMinute >= 0) } ?: 0L
             repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map {
                 if (it.id == task.id) it.copy(deadline = deadline, routineDays = if (it.resetMinute >= 0) it.routineDays else 0L) else it
             })

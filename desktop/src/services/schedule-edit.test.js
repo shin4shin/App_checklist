@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { eventDeadline } from './event-deadline.js';
 
 const source = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 const saveEdit = source.slice(source.indexOf('  const saveEdit ='), source.indexOf('  const deleteTask ='));
@@ -12,6 +13,9 @@ function editTask(category, resetMinute, editTime, originalEditTime = '2026-11-0
   let saved;
   runInNewContext(`${saveEdit}\nsaveEdit({ preventDefault() {} });`, {
     editingTask: task, editTitle: 'After', editTime, originalEditTime,
+    eventDurationEdited: true, editDays: 1, editHours: 0, eventDeadline,
+    appSettings: [{ packageName: task.packageName, dailyResetMinute: 240 }],
+    Date: class extends Date { static now() { return new Date('2026-11-05T16:37').getTime(); } },
     setTasks: update => { saved = update([task])[0]; },
     setEditingTask() {},
   });
@@ -36,7 +40,16 @@ test('title-only edit preserves the deadline', () => {
   assert.equal(saved.title, 'After');
 });
 
-test('event reset time behavior is preserved', () => {
-  assert.equal(editTask('Event', 240, '2026-11-06T15:37').deadline,
-    new Date('2026-11-06T04:00').getTime());
+test('one event day uses the next calendar date and the task or game reset', () => {
+  for (const [reset, expected] of [[-1, '04:00'], [240, '04:00'], [385, '06:25']]) {
+    assert.equal(editTask('Event', reset, '').deadline, new Date('2026-11-06T' + expected).getTime());
+  }
+});
+
+test('future dates use their reset time even when extra hours cross midnight', () => {
+  const now = new Date('2026-11-05T16:37').getTime();
+  assert.equal(eventDeadline(now, 1, 2, 240), new Date('2026-11-06T04:00').getTime());
+  assert.equal(eventDeadline(now, 0, 8, 240), new Date('2026-11-06T04:00').getTime());
+  assert.equal(eventDeadline(now, 1, 8, 240), new Date('2026-11-07T04:00').getTime());
+  assert.equal(eventDeadline(now, 0, 2, 240), new Date('2026-11-05T18:00').getTime());
 });
