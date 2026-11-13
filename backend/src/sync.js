@@ -66,7 +66,7 @@ export async function handleSyncGet(request, env, user, now = Date.now()) {
   ).bind(user.sub, safeSince);
 
   const settingsStmt = env.DB.prepare(
-    'SELECT package_name as packageName, app_name as appName, app_icon as appIcon, daily_reset_minute as dailyResetMinute, weekly_reset_day as weeklyResetDay, weekly_reset_minute as weeklyResetMinute, updated_at as updatedAt FROM user_settings WHERE user_id = ? AND updated_at > ?'
+    'SELECT package_name as packageName, app_name as appName, app_icon as appIcon, app_installed as isInstalled, daily_reset_minute as dailyResetMinute, weekly_reset_day as weeklyResetDay, weekly_reset_minute as weeklyResetMinute, updated_at as updatedAt FROM user_settings WHERE user_id = ? AND updated_at > ?'
   ).bind(user.sub, safeSince);
 
   const tasksResult = await tasksStmt.all();
@@ -80,7 +80,7 @@ export async function handleSyncGet(request, env, user, now = Date.now()) {
 
   return json({
     tasks,
-    settings: settingsResult.results || [],
+    settings: (settingsResult.results || []).map(setting => ({ ...setting, isInstalled: setting.isInstalled < 0 ? null : Boolean(setting.isInstalled) })),
     syncedAt: now,
   });
 }
@@ -143,16 +143,18 @@ export async function handleSyncPost(request, env, user, now = Date.now()) {
     statements.push(
       env.DB.prepare(`
         INSERT INTO user_settings (
-          user_id, package_name, daily_reset_minute, weekly_reset_day, weekly_reset_minute, updated_at, app_name, app_icon
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          user_id, package_name, daily_reset_minute, weekly_reset_day, weekly_reset_minute, updated_at, app_name, app_icon, app_installed
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id, package_name) DO UPDATE SET
           app_icon = CASE WHEN excluded.app_icon <> '' THEN excluded.app_icon ELSE user_settings.app_icon END,
           app_name = CASE WHEN excluded.app_name <> '' THEN excluded.app_name ELSE user_settings.app_name END,
-          daily_reset_minute = excluded.daily_reset_minute,
-          weekly_reset_day = excluded.weekly_reset_day,
-          weekly_reset_minute = excluded.weekly_reset_minute,
-          updated_at = excluded.updated_at
+          app_installed = CASE WHEN excluded.app_installed <> -1 AND excluded.updated_at >= user_settings.updated_at THEN excluded.app_installed ELSE user_settings.app_installed END,
+          daily_reset_minute = CASE WHEN excluded.updated_at > user_settings.updated_at THEN excluded.daily_reset_minute ELSE user_settings.daily_reset_minute END,
+          weekly_reset_day = CASE WHEN excluded.updated_at > user_settings.updated_at THEN excluded.weekly_reset_day ELSE user_settings.weekly_reset_day END,
+          weekly_reset_minute = CASE WHEN excluded.updated_at > user_settings.updated_at THEN excluded.weekly_reset_minute ELSE user_settings.weekly_reset_minute END,
+          updated_at = CASE WHEN excluded.updated_at > user_settings.updated_at THEN excluded.updated_at ELSE user_settings.updated_at END
         WHERE excluded.updated_at > user_settings.updated_at
+          OR (user_settings.app_icon = '' AND excluded.app_icon <> '')
       `).bind(
         user.sub,
         item.packageName,
@@ -161,7 +163,8 @@ export async function handleSyncPost(request, env, user, now = Date.now()) {
         weeklyResetMinute,
         updatedAt,
         typeof item.appName === 'string' ? item.appName : '',
-        typeof item.appIcon === 'string' && item.appIcon.startsWith('data:image/png;base64,') && item.appIcon.length <= 65536 ? item.appIcon : ''
+        typeof item.appIcon === 'string' && item.appIcon.startsWith('data:image/png;base64,') && item.appIcon.length <= 65536 ? item.appIcon : '',
+        typeof item.isInstalled === 'boolean' ? Number(item.isInstalled) : -1
       )
     );
   }
@@ -170,13 +173,26 @@ export async function handleSyncPost(request, env, user, now = Date.now()) {
     await env.DB.batch(statements);
   }
 
+  await env.DB.prepare(`
+    UPDATE user_tasks SET is_deleted = 1,
+      updated_at = CASE WHEN updated_at >= ? THEN updated_at + 1 ELSE ? END
+    WHERE user_id = ? AND (package_name, category, task_id) IN (
+      SELECT package_name, category, task_id FROM (
+        SELECT package_name, category, task_id,
+          ROW_NUMBER() OVER (PARTITION BY package_name, TRIM(title) ORDER BY updated_at DESC, task_id ASC) AS duplicate_rank
+        FROM user_tasks WHERE user_id = ? AND category = 'Daily' AND is_deleted = 0
+          AND task_id <> '__app_completion__' AND TRIM(title) <> ''
+      ) ranked WHERE duplicate_rank > 1
+    )
+  `).bind(now, now, user.sub, user.sub).run();
+
   // Fetch changes that are strictly newer than client's 'since' timestamp
   const serverTasksStmt = env.DB.prepare(
     'SELECT package_name as packageName, category, task_id as taskId, title, done, deadline, routine_days as routineDays, reset_minute as resetMinute, updated_at as updatedAt, is_deleted as isDeleted FROM user_tasks WHERE user_id = ? AND updated_at > ?'
   ).bind(user.sub, since);
 
   const serverSettingsStmt = env.DB.prepare(
-    'SELECT package_name as packageName, app_name as appName, app_icon as appIcon, daily_reset_minute as dailyResetMinute, weekly_reset_day as weeklyResetDay, weekly_reset_minute as weeklyResetMinute, updated_at as updatedAt FROM user_settings WHERE user_id = ? AND updated_at > ?'
+    'SELECT package_name as packageName, app_name as appName, app_icon as appIcon, app_installed as isInstalled, daily_reset_minute as dailyResetMinute, weekly_reset_day as weeklyResetDay, weekly_reset_minute as weeklyResetMinute, updated_at as updatedAt FROM user_settings WHERE user_id = ? AND updated_at > ?'
   ).bind(user.sub, since);
 
   const serverTasks = await serverTasksStmt.all();
@@ -191,7 +207,7 @@ export async function handleSyncPost(request, env, user, now = Date.now()) {
   return json({
     serverChanges: {
       tasks: resultTasks,
-      settings: serverSettings.results || [],
+      settings: (serverSettings.results || []).map(setting => ({ ...setting, isInstalled: setting.isInstalled < 0 ? null : Boolean(setting.isInstalled) })),
     },
     syncedAt: now,
   });

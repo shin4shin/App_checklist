@@ -60,7 +60,7 @@ class SyncManager(context: Context) {
         return res.token
     }
 
-    fun generatePairingCodeAsync(callback: (Result<String>) -> Unit) {
+    fun generatePairingCodeAsync(onSyncFailure: ((Throwable) -> Unit)? = null, callback: (Result<String>) -> Unit) {
         executor.execute {
             try {
                 val token = ensureSession()
@@ -70,9 +70,10 @@ class SyncManager(context: Context) {
                     logout()
                     SyncClient.generatePairingCode(ensureSession())
                 }
-                // First sync local state to cloud so desktop immediately sees it upon pairing
-                syncNow().getOrThrow()
                 mainHandler.post { callback(Result.success(res.code)) }
+                syncNow().exceptionOrNull()?.let { error ->
+                    mainHandler.post { onSyncFailure?.invoke(error) }
+                }
             } catch (e: Exception) {
                 mainHandler.post { callback(Result.failure(e)) }
             }
@@ -111,7 +112,9 @@ class SyncManager(context: Context) {
         val resetTimes = ctx.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
 
-        for (pkg in repository.packages()) {
+        val knownApps = JSONArray(prefs.getString("server_app_packages", "[]"))
+        val packages = repository.packages().toSet() + (0 until knownApps.length()).map { knownApps.getString(it) }
+        for (pkg in packages) {
             for (category in TaskRepository.categories) {
                 val items = repository.tasks(pkg, category)
                 if (items.isEmpty() && pkg in repository.packages(category) && category == "Daily") {
@@ -154,6 +157,7 @@ class SyncManager(context: Context) {
             settingsArray.put(JSONObject().apply {
                 put("packageName", pkg)
                 put("appIcon", appIcon(pkg))
+                put("isInstalled", runCatching { ctx.packageManager.getApplicationInfo(pkg, 0) }.isSuccess)
                 put("appName", runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg))
                 put("dailyResetMinute", hour * 60 + minute)
                 put("weeklyResetDay", weeklyDay)
@@ -203,8 +207,12 @@ class SyncManager(context: Context) {
                 val personal = PersonalPlanRepository(ctx)
                 if (isDeleted) personal.delete(id)
                 else {
-                    personal.save(TaskItem(id, obj.getString("title"), deadline = obj.optLong("deadline", 0L)))
-                    personal.setDone(id, obj.optBoolean("done", false))
+                    val existing = personal.plans().find { it.id == id }
+                    val title = obj.getString("title")
+                    val deadline = obj.optLong("deadline", 0L)
+                    val done = obj.optBoolean("done", false)
+                    if (existing == null || existing.title != title || existing.deadline != deadline) personal.save(TaskItem(id, title, deadline = deadline))
+                    if (existing?.done != done) personal.setDone(id, done)
                 }
                 continue
             }
@@ -240,7 +248,7 @@ class SyncManager(context: Context) {
                 }
             }
 
-            repository.importTasks(pkg, cat, current)
+            if (current != repository.tasks(pkg, cat) || pkg !in repository.packages(cat)) repository.importTasks(pkg, cat, current)
         }
 
         for (i in 0 until serverSettings.length()) {
@@ -277,6 +285,21 @@ class SyncManager(context: Context) {
         return result
     }
 
+    internal fun acknowledgedSettings(current: JSONArray, remote: JSONArray): JSONArray {
+        val server = (0 until remote.length()).map { remote.getJSONObject(it) }.associateBy { it.getString("packageName") }
+        return JSONArray().apply {
+            for (index in 0 until current.length()) {
+                val item = JSONObject(current.getJSONObject(index).toString())
+                if (item.optString("appIcon").isNotEmpty() && server[item.getString("packageName")]?.optString("appIcon").isNullOrEmpty()) {
+                    item.put("appIcon", "")
+                }
+                val confirmed = server[item.getString("packageName")]
+                if (item.has("isInstalled") && (confirmed == null || confirmed.isNull("isInstalled") || confirmed.optBoolean("isInstalled") != item.optBoolean("isInstalled"))) item.remove("isInstalled")
+                put(item)
+            }
+        }
+    }
+
     fun syncNow(): Result<Long> {
         return try {
             val token = ensureSession()
@@ -301,10 +324,11 @@ class SyncManager(context: Context) {
             }
             val response = SyncClient.sync(token, pendingTasks, changes(settings, previousSettings, false), 0L)
             applyServerChanges(response.serverTasks, response.serverSettings)
+            prefs.edit().putString("server_app_packages", JSONArray((0 until response.serverSettings.length()).map { response.serverSettings.getJSONObject(it).getString("packageName") }).toString()).apply()
             val (savedTasks, savedSettings) = buildLocalPayload()
             prefs.edit().putBoolean(cleanupKey, true).putLong(KEY_LAST_SYNC, response.syncedAt)
                 .putString("sent_tasks", savedTasks.toString())
-                .putString("sent_settings", savedSettings.toString()).apply()
+                .putString("sent_settings", acknowledgedSettings(savedSettings, response.serverSettings).toString()).apply()
             Result.success(response.syncedAt)
         } catch (e: Exception) {
             Result.failure(e)

@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { handle } from '../src/index.js';
 import { createJwt } from '../src/auth.js';
+import { handleSyncPost } from '../src/sync.js';
 
 function createDatabase() {
   const db = new DatabaseSync(':memory:');
@@ -11,6 +12,7 @@ function createDatabase() {
   db.exec(readFileSync(new URL('../migrations/0002_sync.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0004_app_names.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0005_app_icons.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0006_app_installed.sql', import.meta.url), 'utf8'));
 
   return {
     prepare(sql) {
@@ -185,6 +187,47 @@ test('Sync push and pull updates tasks and settings with timestamps', async () =
   assert.equal(incData.tasks.length, 1);
   assert.equal(incData.tasks[0].taskId, 'daily_coffee');
   assert.equal(incData.tasks[0].done, true);
+});
+
+test('older icon backfill preserves newer reset settings and timestamp', async () => {
+  const env = { DB: createDatabase() };
+  await env.DB.prepare('INSERT INTO users (id, google_sub, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').bind('icon-test', 'icon-test', 'test@example.com', 1, 1).run();
+  const send = async setting => {
+    const response = await handleSyncPost(new Request('https://events.test/v1/sync', {
+      method: 'POST', body: JSON.stringify({ settings: [setting], since: 0 }),
+    }), env, { sub: 'icon-test' });
+    assert.equal(response.status, 200);
+    return (await response.json()).serverChanges.settings[0];
+  };
+  await send({ packageName: 'test.game', dailyResetMinute: 300, weeklyResetMinute: 360, weeklyResetDay: 4, updatedAt: 200, isInstalled: false });
+  const result = await send({ packageName: 'test.game', dailyResetMinute: 240, weeklyResetMinute: 240, weeklyResetDay: 2, updatedAt: 100, appIcon: 'data:image/png;base64,test' });
+  assert.equal(result.appIcon, 'data:image/png;base64,test');
+  assert.equal(result.dailyResetMinute, 300);
+  assert.equal(result.weeklyResetMinute, 360);
+  assert.equal(result.weeklyResetDay, 4);
+  assert.equal(result.updatedAt, 200);
+  assert.equal(result.isInstalled, false);
+  const installed = await send({ packageName: 'test.game', updatedAt: 300, isInstalled: true });
+  assert.equal(installed.isInstalled, true);
+});
+
+test('same daily title keeps the latest record and syncs a tombstone without merging other categories', async () => {
+  const env = { DB: createDatabase() };
+  await env.DB.prepare('INSERT INTO users (id, google_sub, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').bind('duplicate-test', 'duplicate-test', 'test@example.com', 1, 1).run();
+  const tasks = [
+    { category: 'Daily', taskId: 'old', updatedAt: 10 },
+    { category: 'Daily', taskId: 'new', updatedAt: 20, done: true },
+    { category: 'Event', taskId: 'event-1', updatedAt: 10 },
+    { category: 'Event', taskId: 'event-2', updatedAt: 20 },
+  ].map(task => ({ packageName: 'test.game', title: '일일퀘스트', ...task }));
+  const send = async items => (await handleSyncPost(new Request('https://events.test/v1/sync', {
+    method: 'POST', body: JSON.stringify({ tasks: items, since: 0 }),
+  }), env, { sub: 'duplicate-test' }, 100)).json();
+  const first = (await send(tasks)).serverChanges.tasks;
+  assert.equal(first.find(task => task.taskId === 'old').isDeleted, true);
+  assert.equal(first.find(task => task.taskId === 'new').done, true);
+  assert.equal(first.filter(task => task.category === 'Event' && !task.isDeleted).length, 2);
+  assert.equal((await send([])).serverChanges.tasks.find(task => task.taskId === 'old').updatedAt, 100);
 });
 
 test('Unauthenticated sync requests are rejected with 401', async () => {

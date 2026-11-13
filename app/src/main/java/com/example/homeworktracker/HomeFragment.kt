@@ -46,15 +46,18 @@ class HomeFragment : Fragment() {
     private fun appName(pkg: String): String = try {
         val pm = requireContext().packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    } catch (_: android.content.pm.PackageManager.NameNotFoundException) { pkg }
+    } catch (_: android.content.pm.PackageManager.NameNotFoundException) { "앱 정보 확인 중" }
 
     private fun updateSummary() {
         val root = view ?: return
         val repo = TaskRepository(requireContext())
         val now = System.currentTimeMillis()
-        val daily = repo.packages("Daily").associateWith { repo.tasks(it, "Daily") }
+        val installed = repo.packages().filter { pkg ->
+            runCatching { requireContext().packageManager.getApplicationInfo(pkg, 0) }.isSuccess
+        }.toSet()
+        val daily = repo.packages("Daily").filter { it in installed }.associateWith { repo.tasks(it, "Daily") }
         val allTasks = TaskRepository.categories.associateWith { category ->
-            repo.packages(category).flatMap { repo.tasks(it, category) }
+            repo.packages(category).filter { it in installed }.flatMap { repo.tasks(it, category) }
         }
         val tabs = root.findViewById<com.google.android.material.tabs.TabLayout>(R.id.homeProgressTabs)
         TaskRepository.categories.forEachIndexed { index, category ->
@@ -94,7 +97,7 @@ class HomeFragment : Fragment() {
             done == tasks.size -> "$categoryLabel 항목을 모두 마쳤어요!"
             else -> "$categoryLabel ${tasks.size - done}개 남았어요"
         }
-        val events = repo.packages("Event").flatMap { pkg -> repo.tasks(pkg, "Event").map { pkg to it } }
+        val events = repo.packages("Event").filter { it in installed }.flatMap { pkg -> repo.tasks(pkg, "Event").map { pkg to it } }
         val upcoming = events.filter { !it.second.done && it.second.deadline > now }.sortedBy { it.second.deadline }.take(3)
         renderList(R.id.homeEvents, upcoming.map { (pkg, task) ->
             HomeRow("$pkg:${task.id}", pkg, task.title, "${appName(pkg)} · ${EventDeadline.remaining(task.deadline, now)}", R.id.nav_monthly)

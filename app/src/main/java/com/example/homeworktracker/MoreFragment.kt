@@ -71,7 +71,9 @@ class MoreFragment : Fragment() {
         btnAction.setOnClickListener {
             btnAction.isEnabled = false
             btnAction.text = "발급 중..."
-            syncManager.generatePairingCodeAsync { result ->
+            syncManager.generatePairingCodeAsync(onSyncFailure = { err ->
+                Toast.makeText(ctx, "코드는 발급됐지만 일정 동기화가 지연됐습니다: ${err.message}", Toast.LENGTH_LONG).show()
+            }) { result ->
                 btnAction.isEnabled = true
                 btnAction.text = "연동 코드"
                 result.onSuccess { code ->

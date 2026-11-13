@@ -128,6 +128,16 @@ class SyncManagerTest {
         assertEquals(5, resetTimes.getInt("com.hoyoverse.hkrpg_Daily_hour", -1))
         assertEquals(0, resetTimes.getInt("com.hoyoverse.hkrpg_Daily_minute", -1))
     }
+    @Test fun missingServerIconIsRetriedUntilAcknowledged() {
+        val item = JSONObject().put("packageName", "game").put("appIcon", "data:image/png;base64,test").put("updatedAt", 10)
+        val current = JSONArray().put(item)
+        val empty = JSONArray().put(JSONObject(item.toString()).put("appIcon", ""))
+        val pending = syncManager.acknowledgedSettings(current, empty)
+        assertEquals(1, syncManager.changes(current, pending, false).length())
+        assertEquals(0, syncManager.changes(current, syncManager.acknowledgedSettings(current, current), false).length())
+        assertEquals("data:image/png;base64,test", item.getString("appIcon"))
+    }
+
     @Test fun unchangedTasksAreNotPushedAgainAndDeletesAreSent() {
         val original = JSONObject().put("packageName", "pkg").put("category", "Event")
             .put("taskId", "one").put("title", "일정").put("done", false).put("updatedAt", 1)

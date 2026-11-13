@@ -7,17 +7,19 @@ import { eventDeadline } from './event-deadline.js';
 const source = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 const saveEdit = source.slice(source.indexOf('  const saveEdit ='), source.indexOf('  const deleteTask ='));
 
-function editTask(category, resetMinute, editTime, originalEditTime = '2026-11-05T04:00') {
+function editTask(category, resetMinute, editTime, originalEditTime = '2026-11-05T04:00', overrides = {}) {
   const task = { packageName: 'personal', category, taskId: 'test', title: 'Before',
     resetMinute, deadline: new Date(originalEditTime).getTime() };
   let saved;
   runInNewContext(`${saveEdit}\nsaveEdit({ preventDefault() {} });`, {
     editingTask: task, editTitle: 'After', editTime, originalEditTime,
-    eventDurationEdited: true, editDays: 1, editHours: 0, eventDeadline,
+    editDays: 1, editHours: 0, eventDeadline,
+    originalEditHours: 0,
     appSettings: [{ packageName: task.packageName, dailyResetMinute: 240 }],
     Date: class extends Date { static now() { return new Date('2026-11-05T16:37').getTime(); } },
     setTasks: update => { saved = update([task])[0]; },
     setEditingTask() {},
+    ...overrides,
   });
   return saved;
 }
@@ -26,6 +28,17 @@ test('personal schedule preserves selected time even with a 4 AM reset', () => {
   for (const time of ['2026-11-05T15:37', '2026-11-06T00:00', '2026-11-06T23:59']) {
     assert.equal(editTask('Personal', 240, time).deadline, new Date(time).getTime());
   }
+});
+
+test('fixed event time applies when an edit stays on the same date', () => {
+  const saved = editTask('Event', 300, '', undefined, { editDays: 0, editHours: 2 });
+  assert.equal(saved.deadline, new Date('2026-11-05T05:00').getTime());
+});
+
+test('retyping or restoring the initial duration preserves the exact deadline', () => {
+  const time = '2026-11-05T20:15';
+  const saved = editTask('Event', -1, '', time, { editDays: 0, editHours: 3, originalEditHours: 3 });
+  assert.equal(saved.deadline, new Date(time).getTime());
 });
 
 test('personal schedule without a reset preserves selected time', () => {

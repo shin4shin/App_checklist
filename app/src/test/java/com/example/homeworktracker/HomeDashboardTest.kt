@@ -16,13 +16,20 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class HomeDashboardTest {
     @Test fun dashboardCountsTasksAndLimitsUpcomingEvents() {
-        val repo = TaskRepository(RuntimeEnvironment.getApplication())
+        val context = RuntimeEnvironment.getApplication()
+        shadowOf(context.packageManager).installPackage(android.content.pm.PackageInfo().apply {
+            packageName = "game"
+            applicationInfo = android.content.pm.ApplicationInfo().apply { packageName = "game"; nonLocalizedLabel = "게임" }
+        })
+        val repo = TaskRepository(context)
         repo.addApp("game", "Daily")
         repo.saveTasks("game", "Daily", listOf(TaskItem(title = "A"), TaskItem(title = "B")))
         repo.setTaskDone("game", "Daily", repo.tasks("game", "Daily").first().id, true)
         repo.addApp("game", "Event")
         val now = System.currentTimeMillis()
         repo.saveTasks("game", "Event", (1..4).map { TaskItem(title = "E$it", deadline = now + it * 86_400_000L) } + TaskItem(title = "마감", deadline = now - 1))
+        repo.addApp("com.hoyoverse.nap", "Event")
+        repo.saveTasks("com.hoyoverse.nap", "Event", listOf(TaskItem(title = "E1", deadline = now + 1)))
         val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
         shadowOf(Looper.getMainLooper()).idle()
         val activity = controller.get()

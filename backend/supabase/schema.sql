@@ -45,6 +45,7 @@ CREATE INDEX IF NOT EXISTS idx_pairing_expires ON pairing_codes(expires_at);
 ALTER TABLE user_settings ADD COLUMN app_name TEXT NOT NULL DEFAULT '';
 
 ALTER TABLE user_settings ADD COLUMN app_icon TEXT NOT NULL DEFAULT '';
+ALTER TABLE user_settings ADD COLUMN app_installed BIGINT NOT NULL DEFAULT -1;
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_tasks ENABLE ROW LEVEL SECURITY;

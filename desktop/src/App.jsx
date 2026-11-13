@@ -18,7 +18,7 @@ import {
   Download
 } from 'lucide-react';
 import { syncApi } from './services/api';
-import { shouldApplyRemote } from './services/sync-merge';
+import { shouldApplyRemote, isAppVisible, appDisplayName } from './services/sync-merge';
 import DateTimePicker from './DateTimePicker';
 import { eventDeadline } from './services/event-deadline';
 import TimeNumberInput from './TimeNumberInput';
@@ -69,7 +69,6 @@ export default function App() {
   const [editDays, setEditDays] = useState(0);
   const [editHours, setEditHours] = useState(0);
   const [originalEditHours, setOriginalEditHours] = useState(0);
-  const [eventDurationEdited, setEventDurationEdited] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskTime, setNewTaskTime] = useState('');
@@ -192,7 +191,7 @@ export default function App() {
             packageName, category, taskId, title: '', isDeleted: true, updatedAt: Date.now(),
           }))),
         ],
-        settings: pendingSettings,
+        settings: pendingSettings.map(({ isInstalled, ...setting }) => setting),
         since: 0,
       });
 
@@ -200,7 +199,7 @@ export default function App() {
       setAppSettings(previous => {
         const merged = new Map(receivedSettings.map(setting => [setting.packageName, setting]));
         for (const setting of previous) {
-          if (setting.updatedAt > (merged.get(setting.packageName)?.updatedAt || 0)) merged.set(setting.packageName, setting);
+          if (setting.updatedAt > (merged.get(setting.packageName)?.updatedAt || 0)) merged.set(setting.packageName, { ...setting, isInstalled: merged.get(setting.packageName)?.isInstalled ?? setting.isInstalled });
         }
         return [...merged.values()];
       });
@@ -311,18 +310,17 @@ export default function App() {
     setEditDays(Math.floor(remainingHours / 24));
     setEditHours(remainingHours % 24);
     setOriginalEditHours(remainingHours);
-    setEventDurationEdited(false);
   };
   const saveEdit = event => {
     event.preventDefault();
     if (!editTitle.trim() || !editingTask) return;
     let deadline = editingTask.deadline;
-    if (editingTask.category === 'Event' && eventDurationEdited) {
+    if (editingTask.category === 'Event' && editDays * 24 + editHours !== originalEditHours) {
       if (editDays * 24 + editHours <= 0) return;
       const setting = appSettings.find(item => item.packageName === editingTask.packageName);
       const resetMinute = editingTask.resetMinute != null && editingTask.resetMinute >= 0
         ? editingTask.resetMinute : setting?.dailyResetMinute ?? 240;
-      deadline = eventDeadline(Date.now(), editDays, editHours, resetMinute);
+      deadline = eventDeadline(Date.now(), editDays, editHours, resetMinute, editingTask.resetMinute != null && editingTask.resetMinute >= 0);
     } else if (editingTask.category === 'Personal' && editTime !== originalEditTime) {
       const date = editTime ? new Date(editTime) : null;
       if (date && !Number.isFinite(date.getTime())) return;
@@ -422,18 +420,19 @@ export default function App() {
   };
 
   // Calculations for Home Dashboard
-  const dailyTasks = useMemo(() => tasks.filter(t => t.category === 'Daily' && !t.isDeleted), [tasks]);
+  const visibleTasks = useMemo(() => tasks.filter(task => isAppVisible(task.packageName, appSettings)), [tasks, appSettings]);
+  const dailyTasks = useMemo(() => visibleTasks.filter(t => t.category === 'Daily' && !t.isDeleted), [visibleTasks]);
   const dailyDone = useMemo(() => dailyTasks.filter(t => t.done).length, [dailyTasks]);
   const dailyTotal = dailyTasks.length;
   const progressPercent = dailyTotal > 0 ? Math.round((dailyDone / dailyTotal) * 100) : 0;
-  const pendingTasks = useMemo(() => tasks.filter(t => !t.isDeleted && (!t.done || homeCompleted[`${t.packageName}/${t.category}/${t.taskId}`])), [tasks, homeCompleted]);
-  const eventTasks = useMemo(() => tasks.filter(t => t.category === 'Event' && !t.isDeleted), [tasks]);
+  const pendingTasks = useMemo(() => visibleTasks.filter(t => !t.isDeleted && (!t.done || homeCompleted[`${t.packageName}/${t.category}/${t.taskId}`])), [visibleTasks, homeCompleted]);
+  const eventTasks = useMemo(() => visibleTasks.filter(t => t.category === 'Event' && !t.isDeleted), [visibleTasks]);
 
-  const appName = pkg => appSettings.find(s => s.packageName === pkg)?.appName || tasks.find(t => t.packageName === pkg)?.gameName || pkg;
+  const appName = pkg => appDisplayName(pkg, appSettings, tasks);
   const registeredApps = [...new Set([
     ...appSettings.map(setting => setting.packageName),
-    ...tasks.filter(task => !task.isDeleted).map(task => task.packageName),
-  ])].filter(pkg => pkg !== 'personal' && !/^[a-z][\w]*(?:\.[\w]+)+$/i.test(appName(pkg).trim())).sort((a, b) => appName(a).localeCompare(appName(b), 'ko'));
+    ...visibleTasks.filter(task => !task.isDeleted).map(task => task.packageName),
+  ])].filter(pkg => pkg !== 'personal' && isAppVisible(pkg, appSettings) && !/^[a-z][\w]*(?:\.[\w]+)+$/i.test(appName(pkg).trim())).sort((a, b) => appName(a).localeCompare(appName(b), 'ko'));
   const taskTime = task => task.deadline > 0 ? task.deadline : Infinity;
   const deadlineLabel = task => task.deadline <= 0 ? '시간 미설정' : task.deadline <= deadlineNow ? '마감'
     : new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(task.deadline)) + '까지';
@@ -449,9 +448,9 @@ export default function App() {
       const minute = currentNav === 'Weekly' ? setting?.weeklyResetMinute : setting?.dailyResetMinute;
       return minute != null && minute >= 0 ? minute : Infinity;
     }
-    return Math.min(...tasks.filter(t => t.packageName === pkg && t.category === currentNav && !t.isDeleted).map(taskTime));
+    return Math.min(...visibleTasks.filter(t => t.packageName === pkg && t.category === currentNav && !t.isDeleted).map(taskTime));
   };
-  const sortedPackages = [...new Set(tasks.filter(t => !t.isDeleted).map(t => t.packageName))].sort((a, b) => {
+  const sortedPackages = [...new Set(visibleTasks.filter(t => !t.isDeleted).map(t => t.packageName))].sort((a, b) => {
     if (sortMode === 'name' || packageTime(a) === packageTime(b)) return appName(a).localeCompare(appName(b), 'ko');
     return packageTime(a) - packageTime(b);
   });
@@ -584,7 +583,7 @@ export default function App() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xs font-bold text-[#f0f6fc] uppercase tracking-wider">아직 안 끝낸 일</h2>
-                <span className="text-[12px] text-[#8b949e]">{tasks.filter(t => !t.done && !t.isDeleted).length}개 남음</span>
+                <span className="text-[12px] text-[#8b949e]">{visibleTasks.filter(t => !t.done && !t.isDeleted).length}개 남음</span>
               </div>
 
               {pendingTasks.length === 0 ? (
@@ -640,7 +639,7 @@ export default function App() {
                   {currentNav === 'Daily' ? '데일리 숙제' : currentNav === 'Weekly' ? '위클리 숙제' : currentNav === 'Personal' ? '일정' : '이벤트 숙제'}
                 </h1>
                 <p className="text-[12px] text-[#8b949e]">
-                  {tasks.filter(t => t.category === currentNav && !t.isDeleted).length}개의 등록된 항목
+                  {visibleTasks.filter(t => t.category === currentNav && !t.isDeleted).length}개의 등록된 항목
                 </p>
               </div>
 
@@ -664,11 +663,10 @@ export default function App() {
               </select>
             </label>
             {sortedPackages.map(pkg => {
-              const gameTasks = tasks.filter(t => t.packageName === pkg && t.category === currentNav && !t.isDeleted).sort(compareTasks);
+              const gameTasks = visibleTasks.filter(t => t.packageName === pkg && t.category === currentNav && !t.isDeleted).sort(compareTasks);
               if (gameTasks.length === 0) return null;
 
-              const gameName = appSettings.find(s => s.packageName === pkg)?.appName || (pkg === 'com.hoyoverse.nap' ? '젠레스 존 제로'
-                : pkg === 'com.hoyoverse.hkrpg' ? '붕괴: 스타레일' : pkg === 'personal' ? '개인 계획' : pkg);
+              const gameName = appName(pkg);
               const doneCount = gameTasks.filter(t => t.done).length;
               const allDone = doneCount === gameTasks.length;
               const isExpanded = expandedGames[pkg] !== false;
@@ -748,7 +746,7 @@ export default function App() {
               );
             })}
 
-            {tasks.filter(t => t.category === currentNav && !t.isDeleted).length === 0 && (
+            {visibleTasks.filter(t => t.category === currentNav && !t.isDeleted).length === 0 && (
               <div className="p-8 rounded-2xl bg-[#161b22] border border-[#30363d] text-center text-[#8b949e] text-xs space-y-2">
                 <Sparkles className="w-6 h-6 mx-auto text-[#58a6ff] opacity-60" />
                 <p>등록된 숙제가 없습니다.</p>
@@ -948,8 +946,8 @@ export default function App() {
               <div className="space-y-2 text-[12px] text-[#8b949e]">
                 <span>시간 설정</span>
                 <div className="flex items-center gap-2">
-                  <TimeNumberInput label="남은 일" max={3650} value={editDays} onChange={days => { setEditDays(days); setEventDurationEdited(true); }} /><span>일</span>
-                  <TimeNumberInput label="남은 시간" max={23} value={editHours} onChange={hours => { setEditHours(hours); setEventDurationEdited(true); }} /><span>시간 후</span>
+                  <TimeNumberInput label="남은 일" max={3650} value={editDays} onChange={setEditDays} /><span>일</span>
+                  <TimeNumberInput label="남은 시간" max={23} value={editHours} onChange={setEditHours} /><span>시간 후</span>
                 </div>
               </div>
             )}
