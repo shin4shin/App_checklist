@@ -118,7 +118,7 @@ class SyncManager(context: Context) {
             for (category in TaskRepository.categories) {
                 val items = repository.tasks(pkg, category)
                 if (items.isEmpty() && pkg in repository.packages(category) && category == "Daily") {
-                    val appName = runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+                    val appName = SharedGameInfo.resolve(ctx, pkg)?.name ?: if (SharedGameInfo.isDesktop(pkg)) "" else pkg
                     tasksArray.put(JSONObject().apply {
                         put("packageName", pkg)
                         put("category", category)
@@ -150,15 +150,15 @@ class SyncManager(context: Context) {
 
             val hour = resetTimes.getInt("${pkg}_Daily_hour", 4)
             val minute = resetTimes.getInt("${pkg}_Daily_minute", 0)
-            val weeklyDay = resetTimes.getInt("${pkg}_Weekly_day", 2)
+            val weeklyDay = if (SharedGameInfo.isDesktop(pkg)) resetTimes.getString("${pkg}_Weekly_days", "")?.split(",")?.firstOrNull()?.toIntOrNull() ?: resetTimes.getInt("${pkg}_Weekly_day", 2) else resetTimes.getInt("${pkg}_Weekly_day", 2)
             val weeklyHour = resetTimes.getInt("${pkg}_Weekly_hour", 4)
             val weeklyMinute = resetTimes.getInt("${pkg}_Weekly_minute", 0)
 
             settingsArray.put(JSONObject().apply {
                 put("packageName", pkg)
-                put("appIcon", appIcon(pkg))
-                put("isInstalled", runCatching { ctx.packageManager.getApplicationInfo(pkg, 0) }.isSuccess)
-                put("appName", runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg))
+                put("appIcon", if (SharedGameInfo.isDesktop(pkg)) SharedGameInfo.iconData(ctx, pkg) else appIcon(pkg))
+                put("isInstalled", if (SharedGameInfo.isDesktop(pkg)) JSONObject.NULL else runCatching { ctx.packageManager.getApplicationInfo(pkg, 0) }.isSuccess)
+                put("appName", SharedGameInfo.resolve(ctx, pkg)?.name ?: if (SharedGameInfo.isDesktop(pkg)) "" else pkg)
                 put("dailyResetMinute", hour * 60 + minute)
                 put("weeklyResetDay", weeklyDay)
                 put("weeklyResetMinute", weeklyHour * 60 + weeklyMinute)
@@ -184,6 +184,7 @@ class SyncManager(context: Context) {
     }
 
     fun applyServerChanges(serverTasks: JSONArray, serverSettings: JSONArray) {
+        SharedGameInfo.store(ctx, serverSettings)
         val resetTimes = ctx.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
         val resetEdit = resetTimes.edit()
 
@@ -258,6 +259,7 @@ class SyncManager(context: Context) {
             val weeklyDay = obj.optInt("weeklyResetDay", 2)
             val weeklyMinute = obj.optInt("weeklyResetMinute", 240)
 
+            if (SharedGameInfo.isDesktop(pkg)) resetEdit.putString("${pkg}_Weekly_days", weeklyDay.toString())
             resetEdit.putInt("${pkg}_Daily_hour", dailyMinute / 60)
                 .putInt("${pkg}_Daily_minute", dailyMinute % 60)
                 .putInt("${pkg}_Weekly_day", weeklyDay)
@@ -265,6 +267,9 @@ class SyncManager(context: Context) {
                 .putInt("${pkg}_Weekly_minute", weeklyMinute % 60)
         }
         resetEdit.apply()
+        for (pkg in repository.packages().filter { SharedGameInfo.isDesktop(it) }) {
+            for (category in listOf("Daily", "Weekly")) ResetScheduler.schedule(ctx, pkg, category)
+        }
 
         repository.refresh("")
     }
@@ -294,7 +299,8 @@ class SyncManager(context: Context) {
                     item.put("appIcon", "")
                 }
                 val confirmed = server[item.getString("packageName")]
-                if (item.has("isInstalled") && (confirmed == null || confirmed.isNull("isInstalled") || confirmed.optBoolean("isInstalled") != item.optBoolean("isInstalled"))) item.remove("isInstalled")
+                if (SharedGameInfo.isDesktop(item.getString("packageName")) && item.optString("appName").isNotBlank() && item.optString("appName") != confirmed?.optString("appName")) item.remove("appName")
+                if (!item.isNull("isInstalled") && item.has("isInstalled") && (confirmed == null || confirmed.isNull("isInstalled") || confirmed.optBoolean("isInstalled") != item.optBoolean("isInstalled"))) item.remove("isInstalled")
                 put(item)
             }
         }
@@ -316,7 +322,7 @@ class SyncManager(context: Context) {
                 val now = System.currentTimeMillis()
                 for (i in 0 until remote.serverTasks.length()) {
                     val item = remote.serverTasks.getJSONObject(i)
-                    if (!item.optBoolean("isDeleted") && key(item) !in localKeys) {
+                    if (!SharedGameInfo.isDesktop(item.getString("packageName")) && !item.optBoolean("isDeleted") && key(item) !in localKeys) {
                         pendingTasks.put(JSONObject(item.toString()).put("isDeleted", true)
                             .put("updatedAt", maxOf(now, item.optLong("updatedAt") + 1)))
                     }

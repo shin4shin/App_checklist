@@ -91,8 +91,7 @@ class HomeActivity : AppCompatActivity() {
     private fun showDonePicker() {
         val repository = TaskRepository(this)
         val apps = repository.packages("Daily").mapNotNull { pkg ->
-            try { pkg to packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }
-            catch (_: android.content.pm.PackageManager.NameNotFoundException) { null }
+            SharedGameInfo.resolve(this, pkg)?.let { pkg to it.name }
         }.sortedBy { it.second }
         if (apps.isEmpty()) return
         AlertDialog.Builder(this).setTitle("어떤 앱 숙제를 완료했나요?")

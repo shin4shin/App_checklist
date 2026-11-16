@@ -1,0 +1,12 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:padding="8dp">
+ <CalendarView android:id="@+id/eventCalendar" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_gravity="center_vertical" />
+ <LinearLayout android:layout_width="196dp" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:paddingStart="8dp">
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
+   <NumberPicker android:id="@+id/eventCalendarHour" android:layout_width="72dp" android:layout_height="100dp" android:contentDescription="종료 시" />
+   <TextView android:id="@+id/eventCalendarTimeLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="시" />
+   <NumberPicker android:id="@+id/eventCalendarMinute" android:layout_width="72dp" android:layout_height="100dp" android:contentDescription="종료 분" />
+   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="분" />
+  </LinearLayout>
+  <TextView android:id="@+id/eventCalendarPreview" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:layout_marginTop="8dp" android:textSize="12sp" />
+ </LinearLayout>
+</LinearLayout>

@@ -71,20 +71,20 @@ object EventDeadline {
         if (tasks.size <= 1) return label(tasks.firstOrNull()?.deadline ?: 0L, now)
         val expired = tasks.count { it.deadline in 1..now }
         val upcoming = tasks.map { it.deadline }.filter { it > now }.minOrNull()
-        return if (upcoming != null) "다음 마감 ${remaining(upcoming, now)} · 마감 $expired/${tasks.size}"
-            else "마감 $expired/${tasks.size} · 미설정 ${tasks.count { it.deadline <= 0 }}"
+        return if (upcoming != null) "다음 종료 ${remaining(upcoming, now)} · 종료 $expired/${tasks.size}"
+            else "종료 $expired/${tasks.size} · 미설정 ${tasks.count { it.deadline <= 0 }}"
     }
 
-    fun label(deadline: Long, now: Long = System.currentTimeMillis()): String = when {
-        deadline <= 0 -> "마감 미설정"
-        deadline <= now -> "마감 · ${format(deadline, includeYear = false)}"
-        else -> "${remaining(deadline, now)} · ${format(deadline, includeYear = false)}"
+    fun label(deadline: Long, now: Long = System.currentTimeMillis(), personal: Boolean = false): String = when {
+        deadline <= 0 -> if (personal) "시간 미설정" else "종료 시간 미설정"
+        deadline <= now -> "${if (personal) "기한 지남" else "종료됨"} · ${format(deadline, includeYear = false)}"
+        else -> "${remaining(deadline, now)} · ${format(deadline, includeYear = false)}${if (personal) "까지" else " 종료"}"
     }
 
     /** 마감까지 남은 기간. 정각 단위로 저장하므로 일·시간으로 끊고, 1시간 미만만 분으로 보여준다. */
     fun remaining(deadline: Long, now: Long = System.currentTimeMillis()): String {
         val diff = deadline - now
-        if (diff <= 0) return "마감"
+        if (diff <= 0) return "종료됨"
         val days = diff / 86_400_000L
         val hours = diff % 86_400_000L / 3_600_000L
         return when {

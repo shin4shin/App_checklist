@@ -57,7 +57,7 @@ class DailyFragment : Fragment() {
         }
     }
     private val stateListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        if (isResumed && ::adapter.isInitialized) adapter.notifyDataSetChanged()
+        if (isResumed && ::adapter.isInitialized) refreshAppList()
     }
 
     override fun onCreateView(
@@ -331,19 +331,14 @@ class DailyFragment : Fragment() {
             .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
             .filter { it.packageName != requireContext().packageName }
             .map { AppInfo(pm.getApplicationLabel(it).toString(), it.packageName, pm.getApplicationIcon(it)) }
+            .plus(SharedGameInfo.packages(requireContext()).mapNotNull { SharedGameInfo.resolve(requireContext(), it) })
             .sortedBy { it.name }
     }
 
     private fun refreshAppList() {
-        val pm = requireContext().packageManager
         val packages = getAddedAppPackages()
         appList.clear()
-        appList.addAll(packages.mapNotNull { pkg ->
-            try {
-                val info = pm.getApplicationInfo(pkg, 0)
-                AppInfo(pm.getApplicationLabel(info).toString(), pkg, pm.getApplicationIcon(info))
-            } catch (e: Exception) { null }
-        }.sortedBy { it.name })
+        appList.addAll(packages.mapNotNull { SharedGameInfo.resolve(requireContext(), it) }.sortedBy { it.name })
         adapter.refreshSort()
         adapter.notifyDataSetChanged()
     }
@@ -401,6 +396,14 @@ class DailyFragment : Fragment() {
                         val minute = task.resetMinute.takeIf { it >= 0 } ?: EventDeadline.resetMinute(ctx, app.packageName, commonMinute)
                         EventDeadlineDialog.show(ctx, "${app.name} · ${task.title}", task.deadline,
                             resetMinute = minute, fixed = task.resetMinute >= 0,
+                            onDateSave = { deadline ->
+                                val index = currentTasks.indexOfFirst { it.id == task.id }
+                                if (index >= 0) {
+                                    currentTasks[index] = EventResetTime.apply(currentTasks[index].copy(deadline = deadline,
+                                        routineDays = if (currentTasks[index].resetMinute >= 0) currentTasks[index].routineDays else 0L))
+                                    notifyItemChanged(index)
+                                }
+                            },
                             onRoutine = { deadline, period ->
                                 val index = currentTasks.indexOfFirst { it.id == task.id }
                                 if (index >= 0) {

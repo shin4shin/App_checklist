@@ -17,6 +17,67 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class EventDeadlineTest {
+    @Test @Config(qualifiers = "w900dp-h420dp-land")
+    fun landscapeCalendarAndDurationControlsFitBesideEachOther() {
+        val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
+        val context = controller.get()
+        val calendarDialog = EventCalendarDialog.show(context, 0, android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, 240, false) {}
+        shadowOf(Looper.getMainLooper()).idle()
+        val calendar = calendarDialog.findViewById<android.widget.CalendarView>(R.id.eventCalendar)!!
+        val content = calendar.parent as android.widget.LinearLayout
+        assertEquals(android.widget.LinearLayout.HORIZONTAL, content.orientation)
+        val density = context.resources.displayMetrics.density
+        val width = (600 * density).toInt()
+        val height = content.layoutParams.height
+        content.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(height, android.view.View.MeasureSpec.EXACTLY))
+        content.layout(0, 0, width, height)
+        assertTrue(calendar.width > 0)
+        assertTrue(kotlin.math.abs(content.height / 2 - (calendar.top + calendar.bottom) / 2) <= 1)
+        assertTrue(kotlin.math.abs(content.height / 2 - (content.getChildAt(1).top + content.getChildAt(1).bottom) / 2) <= 1)
+        assertTrue(content.getChildAt(1).bottom <= content.height)
+        assertTrue(content.getChildAt(1).top >= 0)
+        calendarDialog.dismiss()
+        val durationDialog = EventDeadlineDialog.show(context, "이벤트", 0,
+            android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, onDateSave = {}) {}
+        shadowOf(Looper.getMainLooper()).idle()
+        assertNotNull(durationDialog.findViewById<android.widget.LinearLayout>(R.id.eventDeadlineActions))
+        assertEquals(android.view.View.GONE, durationDialog.findViewById<android.widget.TextView>(R.id.eventDeadlinePreview)!!.visibility)
+        assertTrue(durationDialog.getButton(AlertDialog.BUTTON_POSITIVE).isShown)
+        durationDialog.dismiss()
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun calendarDeadlineUsesSelectedHourAndKeepsCommonTimeInOverlay() {
+        val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
+        val initial = java.util.Calendar.getInstance().apply { set(2026, 11, 8, 12, 37, 15) }.timeInMillis
+        for (fixed in listOf(false, true)) {
+            var saved = 0L
+            val type = if (fixed) android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else null
+            val dialog = EventCalendarDialog.show(controller.get(), initial, type, 330, fixed) { saved = it }
+            shadowOf(Looper.getMainLooper()).idle()
+            val hour = dialog.findViewById<NumberPicker>(R.id.eventCalendarHour)!!
+            val minute = dialog.findViewById<NumberPicker>(R.id.eventCalendarMinute)!!
+            assertEquals(!fixed, hour.isEnabled)
+            assertEquals(!fixed, minute.isEnabled)
+            if (!fixed) { hour.value = 4; minute.value = 25 }
+            if (type != null) assertEquals(type, dialog.window!!.attributes.type)
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+            val selected = java.util.Calendar.getInstance().apply { timeInMillis = saved }
+            assertEquals(2026, selected.get(java.util.Calendar.YEAR))
+            assertEquals(11, selected.get(java.util.Calendar.MONTH))
+            assertEquals(8, selected.get(java.util.Calendar.DAY_OF_MONTH))
+            assertEquals(if (fixed) 5 else 4, selected.get(java.util.Calendar.HOUR_OF_DAY))
+            assertEquals(if (fixed) 30 else 25, selected.get(java.util.Calendar.MINUTE))
+            assertEquals(0, selected.get(java.util.Calendar.SECOND))
+        }
+        var called = false
+        EventCalendarDialog.show(controller.get(), initial, null, 240, false) { called = true }
+            .getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        assertFalse(called)
+        controller.pause().stop().destroy()
+    }
+
     @Test fun editorStartsAtRemainingWholeHoursAndUnchangedSavePreservesDeadline() {
         val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
         var calls = 0
@@ -109,12 +170,12 @@ class EventDeadlineTest {
         EventDeadline.save(context, listOf(pkg), 60_000L, System.currentTimeMillis() - 120_000L)
         ResetReceiver().onReceive(context, Intent().putExtra("target_package", pkg).putExtra("target_category", "Event"))
         assertTrue(repo.isDone(pkg, "Event"))
-        assertTrue(EventDeadline.label(context, pkg).startsWith("마감 ·"))
+        assertTrue(EventDeadline.label(context, pkg).startsWith("종료됨 ·"))
         val manager = android.appwidget.AppWidgetManager.getInstance(context)
         val id = shadowOf(manager).createWidget(HomeworkWidget::class.java, R.layout.widget_homework)
         HomeworkWidget().onReceive(context, Intent(HomeworkWidget.ACTION_SELECT_TAB)
             .putExtra(HomeworkWidget.EXTRA_WIDGET_ID, id).putExtra(HomeworkWidget.EXTRA_CATEGORY, "Event"))
-        assertEquals("마감", WidgetCollections.rows(context, "homework", "Event").single().detail)
+        assertEquals("종료됨", WidgetCollections.rows(context, "homework", "Event").single().detail)
     }
 
     @Test fun editorAcceptsDurationAndDoesNotSaveUntilConfirmed() {

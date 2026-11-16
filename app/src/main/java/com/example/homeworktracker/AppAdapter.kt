@@ -195,7 +195,7 @@ class AppAdapter(
         if (selectedPackages.isEmpty()) return
         val packages = selectedPackages.toList().sorted()
         if (category == "Event") {
-            showEventEditor(packages, "선택한 앱 ${packages.size}개에 같은 마감을 설정합니다.")
+            showEventEditor(packages, "선택한 앱 ${packages.size}개에 같은 종료 시간을 설정합니다.")
             return
         }
         showResetEditor(packages, context.getString(R.string.reset_bulk_target, packages.size))
@@ -203,7 +203,15 @@ class AppAdapter(
 
     private fun showEventEditor(packages: List<String>, target: String) {
         EventDeadlineDialog.show(context, "$target · 모든 이벤트에 적용", EventDeadline.get(context, packages.first()),
-            resetMinute = EventDeadline.resetMinute(context, packages.first())) { duration ->
+            resetMinute = EventDeadline.resetMinute(context, packages.first()),
+            onDateSave = { deadline ->
+                val repository = TaskRepository(context)
+                for (pkg in packages.filter { it in repository.packages("Event") }) {
+                    repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map { EventResetTime.apply(it.copy(deadline = deadline)) })
+                }
+                refreshSort()
+                notifyDataSetChanged()
+            }) { duration ->
             EventDeadline.save(context, packages, duration)
             refreshSort()
             notifyDataSetChanged()

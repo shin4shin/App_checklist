@@ -27,3 +27,7 @@ test('newer server changes and new tasks are accepted', () => {
   assert.equal(shouldApplyRemote({ updatedAt: 100 }, { updatedAt: 200 }), true);
   assert.equal(shouldApplyRemote(undefined, { updatedAt: 100 }), true);
 });
+
+test('shared desktop games remain visible without an Android installation', () => {
+  assert.equal(isAppVisible('pc:shared-game', [{ packageName: 'pc:shared-game', isInstalled: false }]), true);
+});

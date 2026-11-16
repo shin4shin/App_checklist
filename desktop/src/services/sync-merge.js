@@ -2,7 +2,7 @@ export function shouldApplyRemote(local, remote) {
   return !local || (remote.updatedAt || 0) > (local.updatedAt || 0);
 }
 export function isAppVisible(packageName, settings) {
-  if (packageName === 'personal') return true;
+  if (packageName === 'personal' || packageName.startsWith('pc:')) return true;
   const setting = settings.find(item => item.packageName === packageName);
   if (setting?.isInstalled === false) return false;
   return !(setting && setting.isInstalled !== true && setting.appName === packageName && !setting.appIcon);

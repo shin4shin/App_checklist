@@ -37,9 +37,11 @@ class OverlayDrawerTest {
         enter(service, "game.one")
         val handle = field(service, "tabView")!!
         touch(handle, MotionEvent.ACTION_DOWN, 10f, 10f)
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(850))
         touch(handle, MotionEvent.ACTION_MOVE, 10f, 90f)
         touch(handle, MotionEvent.ACTION_MOVE, 750f, 90f)
         touch(handle, MotionEvent.ACTION_UP, 750f, 90f)
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400))
         val moved = field(service, "tabView")!!.layoutParams as WindowManager.LayoutParams
         assertEquals(service.resources.displayMetrics.widthPixels - moved.width, moved.x)
         enter(service, "game.two")

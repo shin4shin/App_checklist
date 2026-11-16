@@ -152,7 +152,7 @@ class ChecklistRegressionTest {
         assertTrue(root.findViewById<android.view.View>(R.id.btnMinimizeOverlay).hasOnClickListeners())
         val container = root.findViewById<android.widget.LinearLayout>(R.id.taskContainer)
         assertEquals("이벤트", ((container.getChildAt(2) as android.widget.LinearLayout).getChildAt(0) as android.widget.TextView).text)
-        assertEquals("이벤트 미션\n마감 미설정", container.getChildAt(3).findViewById<android.widget.TextView>(R.id.tvTaskName).text)
+        assertEquals("이벤트 미션\n종료 시간 미설정", container.getChildAt(3).findViewById<android.widget.TextView>(R.id.tvTaskName).text)
         container.getChildAt(3).performClick()
         assertTrue(repo.isDone(pkg, "Event"))
         repo.addApp(pkg, "Daily")

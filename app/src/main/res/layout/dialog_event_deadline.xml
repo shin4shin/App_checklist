@@ -3,8 +3,6 @@
     android:layout_width="match_parent" android:layout_height="wrap_content">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:padding="24dp">
-        <TextView android:id="@+id/eventDeadlineTarget" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center">
             <LinearLayout android:layout_width="88dp" android:layout_marginHorizontal="8dp"
@@ -13,7 +11,7 @@
                     android:text="일" android:labelFor="@+id/eventDaysPicker"
                     android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
                 <NumberPicker android:id="@id/eventDaysPicker" android:layout_width="match_parent"
-                    android:layout_height="180dp" android:contentDescription="마감까지 남은 일수" />
+                    android:layout_height="180dp" android:contentDescription="종료까지 남은 일수" />
             </LinearLayout>
             <LinearLayout android:layout_width="88dp" android:layout_marginHorizontal="8dp"
                 android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
@@ -21,7 +19,7 @@
                     android:text="시간" android:labelFor="@+id/eventHoursPicker"
                     android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
                 <NumberPicker android:id="@id/eventHoursPicker" android:layout_width="match_parent"
-                    android:layout_height="180dp" android:contentDescription="마감까지 남은 시간" />
+                    android:layout_height="180dp" android:contentDescription="종료까지 남은 시간" />
             </LinearLayout>
         </LinearLayout>
         <TextView android:id="@+id/eventDeadlinePreview" android:layout_width="match_parent"

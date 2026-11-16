@@ -23,7 +23,7 @@ object WidgetCollections {
 
     fun rows(context: Context, kind: String, category: String): List<Row> {
         if (kind == "personal") return PersonalWidgetOrder.plans(context).map {
-            Row(it.id, it.title, EventDeadline.label(it.deadline), it.done, taskId = it.id)
+            Row(it.id, it.title, EventDeadline.label(it.deadline, personal = true), it.done, taskId = it.id)
         }
         val repo = TaskRepository(context)
         val times = context.getSharedPreferences("reset_times", 0)
@@ -31,8 +31,7 @@ object WidgetCollections {
             category != "Weekly" || (times.getInt("${it}_Weekly_hour", -1) in 0..23 &&
                 times.getInt("${it}_Weekly_minute", 0) in 0..59)
         }.mapNotNull { pkg ->
-            try { pkg to context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(pkg, 0)).toString() }
-            catch (_: android.content.pm.PackageManager.NameNotFoundException) { null }
+            SharedGameInfo.resolve(context, pkg)?.let { pkg to it.name }
         }.let { apps ->
             val sortMode = context.getSharedPreferences("sort_prefs", 0).getInt("sort_mode", 0)
             if (kind != "homework" || sortMode == 0) apps.sortedBy { it.second }
@@ -48,7 +47,7 @@ object WidgetCollections {
             else repo.tasks(pkg, category).map { task ->
                 Row("$pkg/$category/${task.id}", task.title,
                     if (category == "Event") {
-                        if (task.deadline > 0) EventDeadline.remaining(task.deadline) else "마감 미설정"
+                        if (task.deadline > 0) EventDeadline.remaining(task.deadline) else "종료 시간 미설정"
                     } else "",
                     task.done, pkg, task.id, category, task.deadline)
             }
@@ -75,8 +74,7 @@ object WidgetCollections {
         views.setTextViewText(R.id.widgetCheck, if (row.done) "✓" else if (mini) "" else "○")
         views.setTextColor(R.id.widgetCheck, Color.parseColor(if (row.done) "#3FB950" else "#8B949E"))
         if (row.pkg != null) {
-            val icon = try { context.packageManager.getApplicationIcon(row.pkg) }
-                catch (_: android.content.pm.PackageManager.NameNotFoundException) { context.packageManager.defaultActivityIcon }
+            val icon = SharedGameInfo.resolve(context, row.pkg)?.icon ?: context.packageManager.defaultActivityIcon
             val size = (32 * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             icon.setBounds(0, 0, size, size); icon.draw(Canvas(bitmap))

@@ -1,0 +1,12 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
+  <CalendarView android:id="@+id/eventCalendar" android:layout_width="match_parent" android:layout_height="300dp" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
+   <NumberPicker android:id="@+id/eventCalendarHour" android:layout_width="88dp" android:layout_height="120dp" android:contentDescription="종료 시" />
+   <TextView android:id="@+id/eventCalendarTimeLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="시" />
+   <NumberPicker android:id="@+id/eventCalendarMinute" android:layout_width="88dp" android:layout_height="120dp" android:contentDescription="종료 분" />
+   <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="분" />
+  </LinearLayout>
+  <TextView android:id="@+id/eventCalendarPreview" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" />
+ </LinearLayout>
+</ScrollView>

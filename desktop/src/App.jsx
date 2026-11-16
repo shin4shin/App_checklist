@@ -22,6 +22,7 @@ import { shouldApplyRemote, isAppVisible, appDisplayName } from './services/sync
 import DateTimePicker from './DateTimePicker';
 import { eventDeadline } from './services/event-deadline';
 import TimeNumberInput from './TimeNumberInput';
+import { isDesktopGame, mergeGameSettings, desktopNameRepairs } from './services/desktop-games';
 
 const DEFAULT_TASKS = [];
 const DEMO_TASKS = [
@@ -81,6 +82,15 @@ export default function App() {
   const [addCategory, setAddCategory] = useState('Daily');
   const [pairingInput, setPairingInput] = useState('');
   const [isPairing, setIsPairing] = useState(false);
+  const [desktopGames, setDesktopGames] = useState(() => JSON.parse(localStorage.getItem('desktop_registered_games') || '[]'));
+  const [showDesktopPicker, setShowDesktopPicker] = useState(false);
+  const [desktopCandidates, setDesktopCandidates] = useState([]);
+  const [desktopLoading, setDesktopLoading] = useState(false);
+  const [desktopQuery, setDesktopQuery] = useState('');
+  const [selectedShortcut, setSelectedShortcut] = useState(null);
+  const [desktopName, setDesktopName] = useState('');
+  const currentNavRef = useRef(currentNav);
+  useEffect(() => { currentNavRef.current = currentNav; }, [currentNav]);
   const needsKeyboard = showAddModal || !!editingTask || currentNav === 'more';
 
   useEffect(() => {
@@ -101,6 +111,7 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('daily_check_tasks', JSON.stringify(tasks));
   }, [tasks]);
+  useEffect(() => { localStorage.setItem('desktop_registered_games', JSON.stringify(desktopGames)); }, [desktopGames]);
   useEffect(() => {
     let timer;
     const refresh = () => {
@@ -118,6 +129,19 @@ export default function App() {
   }, [pendingSettings, appSettings]);
 
   useEffect(() => {
+    if (localStorage.getItem('desktop_games_shared_v1')) return;
+    const shared = mergeGameSettings(appSettings, desktopGames).filter(item => isDesktopGame(item.packageName)).map(({ isInstalled, ...item }) => ({ ...item, updatedAt: Date.now() }));
+    setPendingSettings(previous => [...shared.filter(item => !previous.some(pending => pending.packageName === item.packageName)), ...previous]);
+    localStorage.setItem('desktop_games_shared_v1', 'true');
+  }, []);
+
+  useEffect(() => {
+    const repairs = desktopNameRepairs(appSettings, desktopGames, pendingSettings, Date.now());
+    if (!repairs.length) return;
+    setPendingSettings(previous => [...previous.filter(item => !repairs.some(repair => repair.packageName === item.packageName)), ...repairs]);
+  }, [appSettings, desktopGames, pendingSettings]);
+
+  useEffect(() => {
     if (!window.__TAURI__?.window) return;
     const win = window.__TAURI__.window.getCurrentWindow();
     win.setResizable(false).catch(console.error);
@@ -126,6 +150,15 @@ export default function App() {
     const setup = async () => {
       const unstatus = await window.__TAURI__.event.listen('desktop-status', event => setDesktopStatus(event.payload));
       if (disposed) unstatus(); else listeners.push(unstatus);
+      const undrop = await win.onDragDropEvent(event => {
+        if (event.payload.type === 'drop') {
+          const category = currentNavRef.current;
+          setAddCategory(['Daily', 'Weekly', 'Event'].includes(category) ? category : 'Daily');
+          setShowAddModal(true);
+          loadDesktopShortcuts(event.payload.paths);
+        }
+      });
+      if (disposed) undrop(); else listeners.push(undrop);
       const saved = JSON.parse(localStorage.getItem('widget_bounds') || 'null');
       if (saved) {
         const monitors = await window.__TAURI__.window.availableMonitors();
@@ -213,7 +246,7 @@ export default function App() {
       localStorage.setItem(cleanupKey, 'true');
       if (serverTasks.length > 0) {
         setTasks(prev => {
-          const map = new Map((initial === true ? [] : prev).map(t => [`${t.packageName}_${t.category}_${t.taskId}`, t]));
+          const map = new Map((initial === true ? prev.filter(task => isDesktopGame(task.packageName)) : prev).map(t => [`${t.packageName}_${t.category}_${t.taskId}`, t]));
           for (const st of serverTasks) {
             const key = `${st.packageName}_${st.category}_${st.taskId}`;
             if (!shouldApplyRemote(map.get(key), st)) continue;
@@ -420,7 +453,8 @@ export default function App() {
   };
 
   // Calculations for Home Dashboard
-  const visibleTasks = useMemo(() => tasks.filter(task => isAppVisible(task.packageName, appSettings)), [tasks, appSettings]);
+  const gameSettings = useMemo(() => mergeGameSettings(appSettings, desktopGames), [appSettings, desktopGames]);
+  const visibleTasks = useMemo(() => tasks.filter(task => isAppVisible(task.packageName, gameSettings)), [tasks, gameSettings]);
   const dailyTasks = useMemo(() => visibleTasks.filter(t => t.category === 'Daily' && !t.isDeleted), [visibleTasks]);
   const dailyDone = useMemo(() => dailyTasks.filter(t => t.done).length, [dailyTasks]);
   const dailyTotal = dailyTasks.length;
@@ -428,14 +462,36 @@ export default function App() {
   const pendingTasks = useMemo(() => visibleTasks.filter(t => !t.isDeleted && (!t.done || homeCompleted[`${t.packageName}/${t.category}/${t.taskId}`])), [visibleTasks, homeCompleted]);
   const eventTasks = useMemo(() => visibleTasks.filter(t => t.category === 'Event' && !t.isDeleted), [visibleTasks]);
 
-  const appName = pkg => appDisplayName(pkg, appSettings, tasks);
+  const appName = pkg => appDisplayName(pkg, gameSettings, tasks);
   const registeredApps = [...new Set([
-    ...appSettings.map(setting => setting.packageName),
+    ...gameSettings.map(setting => setting.packageName),
     ...visibleTasks.filter(task => !task.isDeleted).map(task => task.packageName),
-  ])].filter(pkg => pkg !== 'personal' && isAppVisible(pkg, appSettings) && !/^[a-z][\w]*(?:\.[\w]+)+$/i.test(appName(pkg).trim())).sort((a, b) => appName(a).localeCompare(appName(b), 'ko'));
+  ])].filter(pkg => pkg !== 'personal' && isAppVisible(pkg, gameSettings) && !/^[a-z][\w]*(?:\.[\w]+)+$/i.test(appName(pkg).trim())).sort((a, b) => appName(a).localeCompare(appName(b), 'ko'));
+  const loadDesktopShortcuts = async paths => {
+    setShowDesktopPicker(true); setSelectedShortcut(null); setDesktopQuery('');
+    setDesktopLoading(true); setDesktopCandidates([]);
+    try {
+      if (!window.__TAURI__) throw new Error('설치된 PC 앱에서 사용할 수 있습니다.');
+      const candidates = await window.__TAURI__.core.invoke('desktop_shortcuts', { paths: paths || null });
+      setDesktopCandidates(candidates);
+    } catch (error) { showToast(String(error)); }
+    finally { setDesktopLoading(false); }
+  };
+  const registerDesktopGame = () => {
+    if (!selectedShortcut || !desktopName.trim()) return;
+    const existing = desktopGames.find(game => game.id === selectedShortcut.id);
+    const packageName = existing?.packageName || `pc:${crypto.randomUUID()}`;
+    if (!existing) setDesktopGames(previous => [...previous, { ...selectedShortcut, name: desktopName.trim(), packageName }]);
+    const setting = { dailyResetMinute: 240, weeklyResetDay: 2, weeklyResetMinute: 240, ...appSettings.find(item => item.packageName === packageName), packageName, appName: desktopName.trim(), appIcon: selectedShortcut.icon, updatedAt: Date.now() };
+    setAppSettings(previous => [...previous.filter(item => item.packageName !== packageName), setting]);
+    setPendingSettings(previous => [...previous.filter(item => item.packageName !== packageName), setting]);
+    setAddGame(packageName); loadAddReset(packageName, addCategory);
+    setShowDesktopPicker(false); setSelectedShortcut(null);
+    showToast(existing ? '이미 등록된 게임을 선택했습니다.' : '게임을 등록했습니다.');
+  };
   const taskTime = task => task.deadline > 0 ? task.deadline : Infinity;
-  const deadlineLabel = task => task.deadline <= 0 ? '시간 미설정' : task.deadline <= deadlineNow ? '마감'
-    : new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(task.deadline)) + '까지';
+  const deadlineLabel = task => task.deadline <= 0 ? '시간 미설정' : task.deadline <= deadlineNow ? (task.category === 'Personal' ? '기한 지남' : '종료됨')
+    : new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(task.deadline)) + (task.category === 'Personal' ? '까지' : ' 종료');
   const completedRank = task => homeCompleted[`${task.packageName}/${task.category}/${task.taskId}`]?.rank ?? (task.done ? 1 : 0);
   const compareTasks = (a, b) => completedRank(a) !== completedRank(b)
     ? completedRank(a) - completedRank(b)
@@ -443,7 +499,7 @@ export default function App() {
     ? a.title.localeCompare(b.title, 'ko')
     : (taskTime(a) === taskTime(b) ? a.title.localeCompare(b.title, 'ko') : taskTime(a) - taskTime(b));
   const packageTime = pkg => {
-    const setting = appSettings.find(s => s.packageName === pkg);
+    const setting = gameSettings.find(s => s.packageName === pkg);
     if (currentNav === 'Daily' || currentNav === 'Weekly') {
       const minute = currentNav === 'Weekly' ? setting?.weeklyResetMinute : setting?.dailyResetMinute;
       return minute != null && minute >= 0 ? minute : Infinity;
@@ -551,8 +607,8 @@ export default function App() {
                       className="p-3 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-between cursor-pointer hover:border-[#58a6ff]/40 transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        {appSettings.find(s => s.packageName === task.packageName)?.appIcon ? (
-                          <img src={appSettings.find(s => s.packageName === task.packageName).appIcon} alt="" className="w-8 h-8 rounded-lg object-contain shrink-0" />
+                        {gameSettings.find(s => s.packageName === task.packageName)?.appIcon ? (
+                          <img src={gameSettings.find(s => s.packageName === task.packageName).appIcon} alt="" className="w-8 h-8 rounded-lg object-contain shrink-0" />
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-[#21262d] flex items-center justify-center shrink-0 text-[#58a6ff]">
                             {task.packageName === 'personal' ? <CalendarDays className="w-4 h-4" /> : <CalendarCheck className="w-4 h-4" />}
@@ -599,8 +655,8 @@ export default function App() {
                       className="p-2.5 rounded-xl bg-[#161b22] border border-[#30363d] flex items-center justify-between cursor-pointer hover:border-[#2f81f7]/50 hover:bg-[#21262d] transition-all"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        {appSettings.find(s => s.packageName === task.packageName)?.appIcon ? (
-                          <img src={appSettings.find(s => s.packageName === task.packageName).appIcon} alt="" className="w-8 h-8 rounded-lg object-contain shrink-0" />
+                        {gameSettings.find(s => s.packageName === task.packageName)?.appIcon ? (
+                          <img src={gameSettings.find(s => s.packageName === task.packageName).appIcon} alt="" className="w-8 h-8 rounded-lg object-contain shrink-0" />
                         ) : (
                           <div className="w-8 h-8 rounded-lg bg-[#21262d] flex items-center justify-center shrink-0 text-[#58a6ff]">
                             {task.packageName === 'personal' ? <CalendarDays className="w-4 h-4" /> : <CalendarCheck className="w-4 h-4" />}
@@ -680,8 +736,8 @@ export default function App() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-[#21262d] flex items-center justify-center font-bold text-xs text-[#58a6ff] border border-[#30363d]">
-                        {appSettings.find(s => s.packageName === pkg)?.appIcon
-                          ? <img src={appSettings.find(s => s.packageName === pkg).appIcon} alt="" className="w-8 h-8 rounded-lg object-contain" />
+                        {gameSettings.find(s => s.packageName === pkg)?.appIcon
+                          ? <img src={gameSettings.find(s => s.packageName === pkg).appIcon} alt="" className="w-8 h-8 rounded-lg object-contain" />
                           : gameName.slice(0, 1)}
                       </div>
                       <div>
@@ -694,7 +750,7 @@ export default function App() {
                           )}
                         </div>
                         <p className="text-[12px] text-[#8b949e] mt-0.5">
-                          {pkg === 'personal' ? '나의 계획' : (() => { const setting = appSettings.find(s => s.packageName === pkg); const minute = currentNav === 'Weekly' ? setting?.weeklyResetMinute : setting?.dailyResetMinute; return minute == null ? '초기화 미설정' : '초기화 ' + String(Math.floor(minute / 60)).padStart(2, '0') + ':' + String(minute % 60).padStart(2, '0'); })()} · {doneCount}/{gameTasks.length} 완료
+                          {pkg === 'personal' ? '나의 계획' : (() => { const setting = gameSettings.find(s => s.packageName === pkg); const minute = currentNav === 'Weekly' ? setting?.weeklyResetMinute : setting?.dailyResetMinute; return minute == null ? '초기화 미설정' : '초기화 ' + String(Math.floor(minute / 60)).padStart(2, '0') + ':' + String(minute % 60).padStart(2, '0'); })()} · {doneCount}/{gameTasks.length} 완료
                         </p>
                       </div>
                     </div>
@@ -880,6 +936,7 @@ export default function App() {
             if (currentNav === 'Personal') setAddGame('personal');
             else if (!registeredApps.includes(addGame)) setAddGame(registeredApps[0] || '');
             setNewTaskTime('');
+            setShowDesktopPicker(false);
             setShowAddModal(true);
           }}
           className="absolute bottom-16 right-4 w-12 h-12 rounded-2xl bg-[#2f81f7] hover:bg-[#1f6feb] text-white flex items-center justify-center shadow-lg transition-transform active:scale-95 z-20"
@@ -959,6 +1016,40 @@ export default function App() {
         </div>
       )}
       {/* Add Task Modal */}
+      {showDesktopPicker && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 p-3">
+          <form role="dialog" aria-modal="true" aria-label="바탕화면 게임 등록" onSubmit={event => { event.preventDefault(); registerDesktopGame(); }} className="w-full max-h-[85vh] overflow-y-auto rounded-2xl border border-[#30363d] bg-[#161b22] p-4 space-y-3">
+            <h2 className="text-sm font-bold">바탕화면에서 게임 등록</h2>
+            {selectedShortcut ? (
+              <>
+                <label className="block text-xs text-[#8b949e]">게임 이름
+                  <input autoFocus required maxLength={160} value={desktopName} onChange={event => setDesktopName(event.target.value)} className="mt-1 w-full rounded-lg bg-[#21262d] border border-[#30363d] p-2 text-white" />
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setSelectedShortcut(null)} className="px-3 py-2 text-xs">뒤로</button>
+                  <button type="submit" disabled={!desktopName.trim()} className="rounded-lg bg-[#2f81f7] px-3 py-2 text-xs disabled:opacity-40">등록</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <input autoFocus aria-label="바탕화면 게임 검색" placeholder="게임 이름 검색" value={desktopQuery} onChange={event => setDesktopQuery(event.target.value)} className="w-full rounded-lg bg-[#21262d] border border-[#30363d] p-2 text-xs" />
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {desktopLoading ? <p className="py-4 text-xs text-[#8b949e]">바탕화면 바로가기를 불러오는 중입니다.</p> : (
+                    desktopCandidates.filter(item => item.name.toLocaleLowerCase().includes(desktopQuery.toLocaleLowerCase())).map(item => (
+                      <button key={item.id} type="button" onClick={() => { setSelectedShortcut(item); setDesktopName(item.name); }} className="flex w-full items-center gap-3 rounded-lg p-2 text-left text-xs hover:bg-[#21262d]">
+                        {item.icon ? <img src={item.icon} alt="" className="h-8 w-8 object-contain" /> : <span className="h-8 w-8 rounded-lg bg-[#21262d] text-center leading-8">{item.name.slice(0, 1)}</span>}
+                        <span>{item.name}</span>
+                      </button>
+                    ))
+                  )}
+                  {!desktopLoading && desktopCandidates.filter(item => item.name.toLocaleLowerCase().includes(desktopQuery.toLocaleLowerCase())).length === 0 && <p className="py-4 text-xs text-[#8b949e]">바로가기가 없습니다. 바탕화면의 게임 아이콘을 위젯에 끌어 놓아도 등록할 수 있습니다.</p>}
+                </div>
+                <button type="button" onClick={() => setShowDesktopPicker(false)} className="block ml-auto px-3 py-2 text-xs">닫기</button>
+              </>
+            )}
+          </form>
+        </div>
+      )}
       {showAddModal && (
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="w-full bg-[#161b22] border border-[#30363d] rounded-2xl p-4 shadow-2xl">
@@ -978,6 +1069,7 @@ export default function App() {
                     registeredApps.length ? registeredApps.map(pkg => <option key={pkg} value={pkg}>{appName(pkg)}</option>) : <option value="">등록된 앱 없음</option>
                   )}
                 </select>
+                <button type="button" onClick={() => loadDesktopShortcuts()} className="mt-2 text-xs text-[#58a6ff] hover:underline">+ 바탕화면에서 게임 등록</button>
               </div>}
               <div>
                 <label className="text-[12px] text-[#8b949e] block mb-1">할 일 제목</label>

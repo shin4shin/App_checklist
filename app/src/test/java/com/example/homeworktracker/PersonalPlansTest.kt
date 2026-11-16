@@ -14,6 +14,29 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class PersonalPlansTest {
+    @Test @Config(qualifiers = "w900dp-h420dp-land")
+    fun landscapeTimeEditorShowsCalendarAndTimeTogetherAndSavesMinutes() {
+        val controller = Robolectric.buildActivity(HomeActivity::class.java).setup()
+        val initial = java.util.Calendar.getInstance().apply { clear(); set(2030, 8, 22, 4, 0, 0) }.timeInMillis
+        var saved = 0L
+        val dialog = PersonalDeadlineDialog.show(controller.get(), "계획", initial) { saved = it }
+        shadowOf(Looper.getMainLooper()).idle()
+        val calendar = dialog.findViewById<android.widget.CalendarView>(R.id.personalDeadlineCalendar)!!
+        val content = calendar.parent as android.widget.LinearLayout
+        assertEquals(android.widget.LinearLayout.HORIZONTAL, content.orientation)
+        val width = (640 * controller.get().resources.displayMetrics.density).toInt()
+        val height = content.layoutParams.height
+        content.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+        content.layout(0, 0, width, height)
+        assertTrue(content.getChildAt(1).top >= 0)
+        assertTrue(content.getChildAt(1).bottom <= content.height)
+        val time = dialog.findViewById<android.widget.TimePicker>(R.id.personalDeadlineTime)!!
+        time.hour = 15; time.minute = 37
+        dialog.getButton(-1).performClick()
+        assertEquals(java.util.Calendar.getInstance().apply { clear(); set(2030, 8, 22, 15, 37, 0) }.timeInMillis, saved)
+        controller.pause().stop().destroy()
+    }
+
     @Test fun directEditorSavesTitleAndCalendarTimeOnlyWhenConfirmed() {
         val context = RuntimeEnvironment.getApplication()
         PlannerMode.setPersonal(context, true)

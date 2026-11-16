@@ -17,19 +17,13 @@ object ResetScheduler {
 
     fun schedule(context: Context, pkg: String, category: String) {
         cancel(context, pkg, category)
+        if (category == "Weekly") DeadlineNotifications.sync(context)
         if (category !in TaskRepository.categories || pkg !in TaskRepository(context).packages(category)) return
         if (category == "Event") TaskRepository(context).advanceRoutines(pkg)
-        val prefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
         val next = if (category == "Event") {
             EventDeadline.get(context, pkg).takeIf { it > System.currentTimeMillis() } ?: return
         } else {
-            val hour = prefs.getInt("${pkg}_${category}_hour", -1)
-            val minute = prefs.getInt("${pkg}_${category}_minute", 0)
-            if (hour !in 0..23 || minute !in 0..59) return
-            val configured = prefs.getString("${pkg}_${category}_days", "").orEmpty()
-                .split(",").mapNotNull { it.toIntOrNull() }.filter { it in 1..7 }.toSet()
-            val days = if (category == "Weekly") configured.ifEmpty { setOf(Calendar.MONDAY) } else emptySet()
-            ResetSchedule.next(Calendar.getInstance(), hour, minute, days)
+            nextResetTime(context, pkg, category) ?: return
         }
         val pending = PendingIntent.getBroadcast(context, 0, intent(context, pkg, category),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -41,6 +35,18 @@ object ResetScheduler {
                 manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pending)
             }
         } else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pending)
+    }
+
+    fun nextResetTime(context: Context, pkg: String, category: String, now: Long = System.currentTimeMillis()): Long? {
+        if (category !in listOf("Daily", "Weekly")) return null
+        val prefs = context.getSharedPreferences("reset_times", Context.MODE_PRIVATE)
+        val hour = prefs.getInt("${pkg}_${category}_hour", -1)
+        val minute = prefs.getInt("${pkg}_${category}_minute", 0)
+        if (hour !in 0..23 || minute !in 0..59) return null
+        val configured = prefs.getString("${pkg}_${category}_days", "").orEmpty()
+            .split(",").mapNotNull { it.toIntOrNull() }.filter { it in 1..7 }.toSet()
+        val days = if (category == "Weekly") configured.ifEmpty { setOf(Calendar.MONDAY) } else emptySet()
+        return ResetSchedule.next(Calendar.getInstance().apply { timeInMillis = now }, hour, minute, days)
     }
 
     fun cancel(context: Context, pkg: String, category: String) {

@@ -81,7 +81,7 @@
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:text="책 반납" android:textSize="20sp" android:textColor="#3FB950" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="마감 미설정" android:textSize="12sp" android:textColor="#8B949E" />
+                android:text="시간 미설정" android:textSize="12sp" android:textColor="#8B949E" />
         </LinearLayout>
     </LinearLayout>
 

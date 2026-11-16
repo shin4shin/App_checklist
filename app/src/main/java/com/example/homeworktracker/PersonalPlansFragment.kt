@@ -48,14 +48,14 @@ class PersonalPlansFragment : Fragment() {
         val plans = PersonalWidgetOrder.plans(requireContext())
         root.findViewById<TextView>(R.id.personalSummary).text = "전체 ${plans.size}개 · 완료 ${plans.count { it.done }}개"
         if (shown == plans) {
-            plans.forEach { deadlines[it.id]?.text = EventDeadline.label(it.deadline) }
+            plans.forEach { deadlines[it.id]?.text = EventDeadline.label(it.deadline, personal = true) }
             return
         }
         shown = plans
         deadlines.clear()
         val list = root.findViewById<LinearLayout>(R.id.personalPlanList).apply { removeAllViews() }
         if (plans.isEmpty()) list.addView(TextView(requireContext()).apply {
-            text = "아직 계획이 없어요.\n제목과 마감 시간을 직접 정해 보세요."
+            text = "아직 계획이 없어요.\n제목과 시간을 직접 정해 보세요."
             setPadding(dp(8), dp(32), dp(8), dp(32))
             setTextColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorOnSurfaceVariant))
         })
@@ -84,7 +84,7 @@ class PersonalPlansFragment : Fragment() {
                 if (plan.done) paintFlags = paintFlags or android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
             })
             val time = TextView(requireContext()).apply {
-                text = EventDeadline.label(plan.deadline); textSize = 12f
+                text = EventDeadline.label(plan.deadline, personal = true); textSize = 12f
                 setPadding(0, dp(6), 0, 0)
                 setTextColor(MaterialColors.getColor(root, com.google.android.material.R.attr.colorOnSurfaceVariant))
             }
@@ -101,7 +101,7 @@ class PersonalPlansFragment : Fragment() {
         val content = layoutInflater.inflate(R.layout.dialog_personal_plan, null)
         val title = content.findViewById<EditText>(R.id.personalPlanTitle).apply { setText(item.title) }
         val time = content.findViewById<TextView>(R.id.personalPlanDeadline)
-        fun updateTime() { time.text = EventDeadline.label(deadline) }
+        fun updateTime() { time.text = EventDeadline.label(deadline, personal = true) }
         updateTime()
         content.findViewById<View>(R.id.personalPlanSetTime).setOnClickListener {
             PersonalDeadlineDialog.show(requireContext(), title.text.toString().ifBlank { "새 계획" }, deadline) { selected ->

@@ -16,6 +16,98 @@ import java.time.Duration
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class OverlayDetectionTest {
+    @Test fun longPressMorphsHandleAndOnlyAnActualDragSavesPosition() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        val prefs = service.getSharedPreferences("app_prefs", 0)
+        val before = prefs.all.toMap()
+        GameOverlayService::class.java.getDeclaredMethod("minimizeToTab", String::class.java).apply { isAccessible = true }.invoke(service, "game")
+        val tab = field(service, "tabView") as android.widget.FrameLayout
+        val originalWidth = tab.layoutParams.width
+        val originalHeight = tab.layoutParams.height
+        fun touch(action: Int, x: Float = 10f, y: Float = 20f) {
+            val event = android.view.MotionEvent.obtain(0, android.os.SystemClock.uptimeMillis(), action, x, y, 0)
+            tab.dispatchTouchEvent(event); event.recycle()
+        }
+        touch(android.view.MotionEvent.ACTION_DOWN)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(850))
+        assertNotNull(field(service, "deleteZoneView"))
+        assertEquals(1f, tab.getChildAt(1).alpha, 0.01f)
+        assertEquals(tab.layoutParams.width, tab.layoutParams.height)
+        touch(android.view.MotionEvent.ACTION_UP)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
+        assertNull(field(service, "deleteZoneView"))
+        assertSame(tab, field(service, "tabView"))
+        assertEquals(0f, tab.getChildAt(1).alpha, 0.01f)
+        assertEquals(originalWidth, tab.layoutParams.width)
+        assertEquals(originalHeight, tab.layoutParams.height)
+        assertEquals(before, prefs.all)
+        touch(android.view.MotionEvent.ACTION_DOWN)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(850))
+        val screenWidth = service.getSystemService(android.view.WindowManager::class.java).currentWindowMetrics.bounds.width()
+        touch(android.view.MotionEvent.ACTION_MOVE, screenWidth - 10f, 100f)
+        touch(android.view.MotionEvent.ACTION_UP, screenWidth - 10f, 100f)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
+        assertEquals(screenWidth, prefs.getInt("overlay_tab_x", -1))
+        assertEquals(0f, tab.getChildAt(1).alpha, 0.01f)
+        assertEquals(originalWidth, tab.layoutParams.width)
+        assertNull(field(service, "deleteZoneView"))
+        controller.destroy()
+    }
+
+    @Test fun shortDragStaysOnSameEdgeAndCannotDeleteWhileHorizontalSwipeStillOpens() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        val bounds = service.getSystemService(android.view.WindowManager::class.java).currentWindowMetrics.bounds
+        service.getSharedPreferences("app_prefs", 0).edit().putInt("overlay_tab_x", bounds.width()).apply()
+        GameOverlayService::class.java.getDeclaredField("savedX").apply { isAccessible = true }.setInt(service, bounds.width())
+        GameOverlayService::class.java.getDeclaredMethod("minimizeToTab", String::class.java).apply { isAccessible = true }.invoke(service, "game")
+        val tab = field(service, "tabView") as android.widget.FrameLayout
+        val initial = tab.layoutParams as android.view.WindowManager.LayoutParams
+        val startX = initial.x.toFloat()
+        val startY = initial.y.toFloat()
+        val density = service.resources.displayMetrics.density
+        fun touch(view: android.view.View, action: Int, x: Float, y: Float) {
+            val event = android.view.MotionEvent.obtain(0, android.os.SystemClock.uptimeMillis(), action, x, y, 0)
+            view.dispatchTouchEvent(event); event.recycle()
+        }
+        touch(tab, android.view.MotionEvent.ACTION_DOWN, startX, startY)
+        touch(tab, android.view.MotionEvent.ACTION_MOVE, startX - 20 * density, startY + 40 * density)
+        assertEquals(startX.toInt(), initial.x)
+        assertTrue(initial.y > startY)
+        assertNull(field(service, "deleteZoneView"))
+        touch(tab, android.view.MotionEvent.ACTION_MOVE, 0f, bounds.height().toFloat())
+        touch(tab, android.view.MotionEvent.ACTION_UP, 0f, bounds.height().toFloat())
+        assertNotNull(field(service, "tabView"))
+        assertNull(field(service, "dismissedPkg"))
+        assertEquals(bounds.width(), service.getSharedPreferences("app_prefs", 0).getInt("overlay_tab_x", -1))
+        val restored = field(service, "tabView") as android.view.View
+        touch(restored, android.view.MotionEvent.ACTION_DOWN, startX, 100f)
+        touch(restored, android.view.MotionEvent.ACTION_MOVE, 0f, 100f)
+        touch(restored, android.view.MotionEvent.ACTION_UP, 0f, 100f)
+        assertNotNull(field(service, "overlayView"))
+        assertNull(field(service, "tabView"))
+        controller.destroy()
+    }
+
+    @Test fun cancellingLongPressDuringMorphRemovesAnimationAndDeleteZone() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        GameOverlayService::class.java.getDeclaredMethod("minimizeToTab", String::class.java).apply { isAccessible = true }.invoke(service, "game")
+        val tab = field(service, "tabView") as android.widget.FrameLayout
+        for (action in listOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_CANCEL)) {
+            val event = android.view.MotionEvent.obtain(0, android.os.SystemClock.uptimeMillis(), action, 10f, 20f, 0)
+            tab.dispatchTouchEvent(event); event.recycle()
+            if (action == android.view.MotionEvent.ACTION_DOWN) shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        assertNull(field(service, "tabMorphAnimator"))
+        assertNull(field(service, "deleteZoneView"))
+        val restored = field(service, "tabView") as android.widget.FrameLayout
+        assertEquals(0f, restored.getChildAt(1).alpha, 0.01f)
+        controller.destroy()
+    }
+
     private fun field(service: GameOverlayService, name: String): Any? =
         GameOverlayService::class.java.getDeclaredField(name).apply { isAccessible = true }.get(service)
 

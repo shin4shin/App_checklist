@@ -71,6 +71,10 @@ class DeadlineNotificationsTest {
     }
     @Test fun combinesBothModesAndReschedulesEditsAndDisable() {
         val context = RuntimeEnvironment.getApplication()
+        shadowOf(context.packageManager).installPackage(android.content.pm.PackageInfo().apply {
+            packageName = "game"
+            applicationInfo = android.content.pm.ApplicationInfo().apply { packageName = "game"; nonLocalizedLabel = "게임" }
+        })
         shadowOf(context).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
         val now = System.currentTimeMillis()
         val personal = PersonalPlanRepository(context)
@@ -92,6 +96,54 @@ class DeadlineNotificationsTest {
             shadowOf(it.operation).savedIntent.component?.className == DeadlineNotificationReceiver::class.java.name
         })
     }
+    @Test fun ignoresUninstalledPackageAliasInNotificationCountAndText() {
+        val context = RuntimeEnvironment.getApplication()
+        shadowOf(context).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        val pkg = "com.HoYoverse.Nap"
+        shadowOf(context.packageManager).installPackage(android.content.pm.PackageInfo().apply {
+            packageName = pkg
+            applicationInfo = android.content.pm.ApplicationInfo().apply { packageName = pkg; nonLocalizedLabel = "젠레스 존 제로" }
+        })
+        val repo = TaskRepository(context)
+        for (name in listOf("com.hoyoverse.nap", pkg)) {
+            repo.addApp(name, "Event")
+            repo.saveTasks(name, "Event", listOf(TaskItem(title = "사이버 명의, 출동!", deadline = System.currentTimeMillis() + 3_600_000L)))
+        }
+        val entries = DeadlineNotifications.entries(context)
+        assertEquals(1, entries.size)
+        assertEquals("젠레스 존 제로 · 사이버 명의, 출동!", entries.single().title)
+        val notification = shadowOf(context.getSystemService(NotificationManager::class.java)).getNotification(DeadlineNotifications.NOTIFICATION_ID)
+        assertFalse(notification.extras.toString().contains("com.hoyoverse.nap"))
+    }
+
+    @Test fun weeklyReminderUsesNextResetAndDisappearsWhenCompleted() {
+        val context = RuntimeEnvironment.getApplication()
+        shadowOf(context).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        val pkg = context.packageName
+        val now = java.util.Calendar.getInstance().apply { clear(); set(2026, 10, 15, 12, 0, 0) }.timeInMillis
+        val deadline = java.util.Calendar.getInstance().apply { clear(); set(2026, 10, 16, 4, 30, 0) }.timeInMillis
+        context.getSharedPreferences("reset_times", 0).edit().putInt("${pkg}_Weekly_hour", 4)
+            .putInt("${pkg}_Weekly_minute", 30).putString("${pkg}_Weekly_days", "2").commit()
+        val repo = TaskRepository(context)
+        repo.addApp(pkg, "Weekly")
+        val item = TaskItem(title = "주간 보상 수령")
+        val completed = TaskItem(title = "완료")
+        repo.saveTasks(pkg, "Weekly", listOf(item, completed))
+        repo.setTaskDone(pkg, "Weekly", completed.id, true)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        DeadlineNotifications.sync(context, deadline - DeadlineNotifications.LEAD - 1)
+        assertNull(shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID))
+        DeadlineNotifications.sync(context, now)
+        val notification = shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID)
+        assertNotNull(notification)
+        assertEquals("곧 끝나는 일정 1개", notification.extras.getCharSequence(Notification.EXTRA_TITLE_BIG).toString())
+        assertEquals("Weekly", shadowOf(notification.contentIntent).savedIntent.getStringExtra("category"))
+        assertEquals(deadline, DeadlineNotifications.entries(context, now).single().deadline)
+        repo.setTaskDone(pkg, "Weekly", item.id, true)
+        DeadlineNotifications.sync(context, now)
+        assertNull(shadowOf(manager).getNotification(DeadlineNotifications.NOTIFICATION_ID))
+    }
+
     @Test fun deniedPermissionDoesNotCrashOrPostNotification() {
         val context = RuntimeEnvironment.getApplication()
         shadowOf(context).denyPermissions(android.Manifest.permission.POST_NOTIFICATIONS)

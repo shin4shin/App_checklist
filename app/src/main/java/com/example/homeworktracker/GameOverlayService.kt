@@ -52,6 +52,7 @@ class GameOverlayService : AccessibilityService() {
     private var tabView: View? = null
     private var revealOverlayView: View? = null
     private var tabLongPressRunnable: Runnable? = null
+    private var tabMorphAnimator: android.animation.ValueAnimator? = null
     private var windowManager: WindowManager? = null
     private var currentPkg: String? = null
     private var savedY = -1
@@ -298,6 +299,51 @@ class GameOverlayService : AccessibilityService() {
                 setColor(Color.parseColor("#E6EDF3")); cornerRadius = dp(3) * 2 / 3f
             }
         }, FrameLayout.LayoutParams((dp(5) * 2 / 3).coerceAtLeast(1), dp(32) * 2 / 3, Gravity.CENTER))
+        addView(android.widget.ImageView(this@GameOverlayService).apply {
+            setImageResource(R.drawable.ic_overlay_move)
+            alpha = 0f
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER))
+    }
+
+    private fun morphHandle(tab: FrameLayout, params: WindowManager.LayoutParams, moving: Boolean) {
+        tabMorphAnimator?.cancel()
+        val fromX = params.x; val fromY = params.y
+        val fromWidth = params.width; val fromHeight = params.height
+        val size = dp(48)
+        val toWidth = if (moving) size else handleWidth
+        val toHeight = if (moving) size else handleHeight
+        val toX = if (moving) {
+            if (isOnLeft) dp(12) else screenBounds.width() - size - dp(12)
+        } else handleX()
+        val toY = (if (moving) fromY + (fromHeight - size) / 2 else handleY())
+            .coerceIn(0, (screenBounds.height() - toHeight).coerceAtLeast(0))
+        val fromProgress = tab.getChildAt(1).alpha
+        val toProgress = if (moving) 1f else 0f
+        tab.contentDescription = if (moving) "오버레이 위치 이동, 아래 삭제 영역으로 끌어 닫기" else "오버레이 펼치기, 위아래로 끌어 위치 이동"
+        tabMorphAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 340
+            interpolator = android.view.animation.OvershootInterpolator(1.8f)
+            addUpdateListener {
+                if (tabView !== tab) return@addUpdateListener
+                val fraction = it.animatedValue as Float
+                val progress = (fromProgress + (toProgress - fromProgress) * fraction).coerceIn(0f, 1f)
+                params.width = (fromWidth + (toWidth - fromWidth) * fraction).toInt()
+                params.height = (fromHeight + (toHeight - fromHeight) * fraction).toInt()
+                params.x = (fromX + (toX - fromX) * fraction).toInt().coerceIn(0, (screenBounds.width() - params.width).coerceAtLeast(0))
+                params.y = (fromY + (toY - fromY) * fraction).toInt().coerceIn(0, (screenBounds.height() - params.height).coerceAtLeast(0))
+                val radius = dp(24) * 2 / 3f
+                val edgeRadius = dp(14) * progress
+                val outerRadius = radius + (dp(14) - radius) * progress
+                (tab.background as GradientDrawable).cornerRadii = if (isOnLeft)
+                    floatArrayOf(edgeRadius, edgeRadius, outerRadius, outerRadius, outerRadius, outerRadius, edgeRadius, edgeRadius)
+                else floatArrayOf(outerRadius, outerRadius, edgeRadius, edgeRadius, edgeRadius, edgeRadius, outerRadius, outerRadius)
+                tab.getChildAt(0).alpha = 1f - progress
+                tab.getChildAt(1).alpha = progress
+                windowManager?.updateViewLayout(tab, params)
+            }
+            start()
+        }
     }
 
     private fun drawerParams() = edgeOverlayParams().apply {
@@ -497,6 +543,12 @@ class GameOverlayService : AccessibilityService() {
             task.deadline,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             resetMinute = minute, fixed = task.resetMinute >= 0,
+            onDateSave = { deadline ->
+                repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map {
+                    if (it.id == task.id) EventResetTime.apply(it.copy(deadline = deadline,
+                        routineDays = if (it.resetMinute >= 0) it.routineDays else 0L)) else it
+                })
+            },
             onRoutine = { deadline, period ->
                 repository.saveTasks(pkg, "Event", repository.tasks(pkg, "Event").map {
                     if (it.id == task.id) it.copy(deadline = deadline, routineDays = period) else it
@@ -531,12 +583,17 @@ class GameOverlayService : AccessibilityService() {
         var longPressed = false
         var reveal = 0f
         val dismiss = { dismissedPkg = pkg; isMinimized = false; hideAll() }
-        val longPress = Runnable { longPressed = true; showDeleteZone(dismiss) }
+        val longPress = Runnable {
+            longPressed = true
+            showDeleteZone(dismiss)
+            morphHandle(tab, params, true)
+        }
         tabLongPressRunnable = longPress
         tab.setOnClickListener { expandFromTab(pkg) }
         tab.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    tabMorphAnimator?.end()
                     startX = event.rawX; startY = event.rawY
                     initialX = params.x; initialY = params.y
                     dragging = false; sliding = false; longPressed = false; reveal = 0f
@@ -554,7 +611,11 @@ class GameOverlayService : AccessibilityService() {
                             tab.alpha = 0f
                         } else {
                             dragging = true
-                            showDeleteZone(dismiss)
+                            if (longPressed) {
+                                tabMorphAnimator?.end()
+                                initialX = params.x; initialY = params.y
+                            }
+                            if (longPressed) showDeleteZone(dismiss)
                         }
                     }
                     if (sliding) {
@@ -562,8 +623,8 @@ class GameOverlayService : AccessibilityService() {
                         revealOverlayView?.let { setReveal(it, reveal) }
                     }
                     if (dragging) {
-                        params.x = (initialX + dx.toInt()).coerceIn(0, (screenBounds.width() - handleWidth).coerceAtLeast(0))
-                        params.y = (initialY + dy.toInt()).coerceIn(0, (screenBounds.height() - handleHeight).coerceAtLeast(0))
+                        params.x = if (longPressed) (initialX + dx.toInt()).coerceIn(0, (screenBounds.width() - params.width).coerceAtLeast(0)) else initialX
+                        params.y = (initialY + dy.toInt()).coerceIn(0, (screenBounds.height() - params.height).coerceAtLeast(0))
                         windowManager?.updateViewLayout(tab, params)
                         (deleteZoneView as? TextView)?.setTextColor(
                             Color.parseColor(if (isInDeleteZone(event.rawY)) "#F85149" else "#F0F6FC"))
@@ -574,20 +635,21 @@ class GameOverlayService : AccessibilityService() {
                     handler.removeCallbacks(longPress)
                     when {
                         dragging -> {
-                            if (isInDeleteZone(event.rawY)) dismiss()
+                            if (longPressed && isInDeleteZone(event.rawY)) dismiss()
                             else {
-                                savedX = if (params.x + handleWidth / 2 < screenBounds.width() / 2) 0 else screenBounds.width()
-                                savedY = params.y
+                                if (longPressed) savedX = if (params.x + params.width / 2 < screenBounds.width() / 2) 0 else screenBounds.width()
+                                savedY = (params.y + (params.height - handleHeight) / 2).coerceIn(0, (screenBounds.height() - handleHeight).coerceAtLeast(0))
                                 getSharedPreferences("app_prefs", MODE_PRIVATE).edit()
                                     .putInt("overlay_tab_x", savedX).putInt("overlay_tab_y", savedY).apply()
-                                minimizeToTab(pkg)
+                                if (longPressed) { hideDeleteZone(); morphHandle(tab, params, false) }
+                                else minimizeToTab(pkg)
                             }
                         }
                         sliding -> {
                             if (reveal >= 0.25f) completeReveal()
                             else minimizeToTab(pkg)
                         }
-                        longPressed -> hideDeleteZone()
+                        longPressed -> { hideDeleteZone(); morphHandle(tab, params, false) }
                         else -> tab.performClick()
                     }
                     true
@@ -765,6 +827,8 @@ class GameOverlayService : AccessibilityService() {
     }
 
     private fun hideAll() {
+        tabMorphAnimator?.cancel()
+        tabMorphAnimator = null
         tabLongPressRunnable?.let { handler.removeCallbacks(it) }
         tabLongPressRunnable = null
         for (root in listOfNotNull(overlayView, revealOverlayView)) {

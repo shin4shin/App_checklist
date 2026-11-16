@@ -18,16 +18,15 @@ object EventDeadlineDialog {
         onRoutine: ((Long, Long) -> Unit)? = null,
         resetMinute: Int = 240,
         fixed: Boolean = false,
+        onDateSave: ((Long) -> Unit)? = null,
         onSave: (Long?) -> Unit
     ): AlertDialog {
-        val compact = windowType == android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        val landscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val compact = landscape || windowType == android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
         val builder = MaterialAlertDialogBuilder(context)
         val content = LayoutInflater.from(builder.context).inflate(
             if (compact) R.layout.dialog_event_deadline_compact else R.layout.dialog_event_deadline, null)
-        content.findViewById<TextView>(R.id.eventDeadlineTarget).apply {
-            text = target
-            if (compact) { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
-        }
+        content.contentDescription = "$dialogTitle · $target"
         val days = content.findViewById<NumberPicker>(R.id.eventDaysPicker).apply {
             minValue = 0
             maxValue = 3650
@@ -47,23 +46,38 @@ object EventDeadlineDialog {
         fun unchanged() = currentDeadline > 0 && days.value == initialDays && hours.value == initialHours
         fun duration() = days.value * 86_400_000L + hours.value * 3_600_000L
         val preview = content.findViewById<TextView>(R.id.eventDeadlinePreview)
-        val dialog = builder.setTitle(dialogTitle).setView(content)
+        val dialog = builder.setView(content)
             .setNegativeButton("취소", null).setPositiveButton("저장", null)
             .apply { if (onRoutine != null) setNeutralButton("루틴", null) }.create()
+        if (onDateSave != null) {
+            val container = content.findViewById<android.widget.LinearLayout>(R.id.eventDeadlineActions)
+                ?: ((content as android.widget.ScrollView).getChildAt(0) as android.widget.LinearLayout)
+            container.addView(com.google.android.material.button.MaterialButton(builder.context).apply {
+                text = "달력으로 설정"
+                textSize = 12f
+                minimumWidth = 0; minimumHeight = 0
+                val density = resources.displayMetrics.density
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, (40 * density).toInt()).apply {
+                    gravity = android.view.Gravity.CENTER_HORIZONTAL
+                }
+                setOnClickListener {
+                    EventCalendarDialog.show(context, currentDeadline, windowType, resetMinute, fixed) { deadline ->
+                        onDateSave(deadline)
+                        dialog.dismiss()
+                    }
+                }
+            }, 1)
+        }
         fun validate() {
             val duration = duration()
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = unchanged() || duration > 0
             if (compact) {
-                preview.text = when {
-                    unchanged() -> "${EventDeadline.format(currentDeadline, includeYear = false)} 마감\n남은 시간 ${days.value}일 ${hours.value}시간"
-                    duration == 0L -> "1시간 이상 선택해 주세요."
-                    else -> "${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration, resetMinute, fixed), includeYear = false)} 마감"
-                }
+                preview.visibility = android.view.View.GONE
                 return
             }
             preview.visibility = if (unchanged()) android.view.View.GONE else android.view.View.VISIBLE
             preview.text = if (duration == 0L) "1시간 이상 선택해 주세요."
-                else "예상 마감: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration, resetMinute, fixed))}"
+                else "예상 종료 시간: ${EventDeadline.format(EventDeadline.calculate(System.currentTimeMillis(), duration, resetMinute, fixed))}"
         }
         days.setOnValueChangedListener { _, _, _ -> validate() }
         hours.setOnValueChangedListener { _, _, _ -> validate() }
@@ -89,11 +103,10 @@ object EventDeadlineDialog {
         if (compact) {
             val metrics = context.resources.displayMetrics
             val width = minOf((320 * metrics.density).toInt(), metrics.widthPixels - (24 * metrics.density).toInt())
-            // Keep buttons visible in landscape; only the picker content scrolls.
             content.measure(android.view.View.MeasureSpec.makeMeasureSpec(width, android.view.View.MeasureSpec.AT_MOST),
                 android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
             val available = (metrics.heightPixels - 180 * metrics.density).toInt().coerceAtLeast((80 * metrics.density).toInt())
-            if (content.measuredHeight > available) content.layoutParams.height = available
+            if (!landscape && content.measuredHeight > available) content.layoutParams.height = available
             dialog.window?.setLayout(width, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         return dialog

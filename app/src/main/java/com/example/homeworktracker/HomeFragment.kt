@@ -43,17 +43,14 @@ class HomeFragment : Fragment() {
     private fun navigate(id: Int) {
         requireActivity().findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = id
     }
-    private fun appName(pkg: String): String = try {
-        val pm = requireContext().packageManager
-        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    } catch (_: android.content.pm.PackageManager.NameNotFoundException) { "앱 정보 확인 중" }
+    private fun appName(pkg: String): String = SharedGameInfo.resolve(requireContext(), pkg)?.name ?: "앱 정보 확인 중"
 
     private fun updateSummary() {
         val root = view ?: return
         val repo = TaskRepository(requireContext())
         val now = System.currentTimeMillis()
         val installed = repo.packages().filter { pkg ->
-            runCatching { requireContext().packageManager.getApplicationInfo(pkg, 0) }.isSuccess
+            SharedGameInfo.resolve(requireContext(), pkg) != null
         }.toSet()
         val daily = repo.packages("Daily").filter { it in installed }.associateWith { repo.tasks(it, "Daily") }
         val allTasks = TaskRepository.categories.associateWith { category ->
@@ -101,15 +98,15 @@ class HomeFragment : Fragment() {
         val upcoming = events.filter { !it.second.done && it.second.deadline > now }.sortedBy { it.second.deadline }.take(3)
         renderList(R.id.homeEvents, upcoming.map { (pkg, task) ->
             HomeRow("$pkg:${task.id}", pkg, task.title, "${appName(pkg)} · ${EventDeadline.remaining(task.deadline, now)}", R.id.nav_monthly)
-        }, "다가오는 이벤트 마감이 없어요")
+        }, "곧 끝나는 이벤트가 없어요")
         val expired = events.filter { it.second.deadline in 1..now }.sortedByDescending { it.second.deadline }
         val toggle = root.findViewById<TextView>(R.id.homeExpiredToggle)
         toggle.visibility = if (expired.isEmpty()) View.GONE else View.VISIBLE
-        toggle.text = "마감된 이벤트 ${expired.size}개 ${if (expiredExpanded) "접기 ▴" else "보기 ▾"}"
+        toggle.text = "종료된 이벤트 ${expired.size}개 ${if (expiredExpanded) "접기 ▴" else "보기 ▾"}"
         root.findViewById<LinearLayout>(R.id.homeExpiredEvents).visibility = if (expiredExpanded) View.VISIBLE else View.GONE
         if (expiredExpanded) renderList(R.id.homeExpiredEvents, expired.map { (pkg, task) ->
             HomeRow("$pkg:${task.id}", pkg, task.title, "${appName(pkg)} · ${EventDeadline.label(task.deadline, now)}", R.id.nav_monthly)
-        }, "마감된 이벤트가 없어요")
+        }, "종료된 이벤트가 없어요")
         val unfinished = daily.filterValues { items -> items.any { !it.done } }.toList().sortedBy { appName(it.first) }
         val dailyEmpty = daily.values.all { it.isEmpty() }
         renderList(R.id.homePendingApps, unfinished.map { (pkg, items) ->
@@ -162,8 +159,7 @@ class HomeFragment : Fragment() {
             setPadding(dp(16), dp(16), dp(16), dp(16))
         }
         line.addView(ImageView(requireContext()).apply {
-            try { setImageDrawable(requireContext().packageManager.getApplicationIcon(pkg)) }
-            catch (_: android.content.pm.PackageManager.NameNotFoundException) { setImageResource(R.mipmap.ic_launcher) }
+            setImageDrawable(SharedGameInfo.resolve(requireContext(), pkg)?.icon ?: requireContext().packageManager.defaultActivityIcon)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginEnd = dp(12) })
         val labels = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }

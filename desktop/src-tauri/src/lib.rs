@@ -3,6 +3,14 @@ static RUNNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::n
 
 #[cfg(windows)]
 mod desktop;
+#[cfg(windows)]
+mod shortcuts;
+
+#[tauri::command]
+async fn desktop_shortcuts(paths: Option<Vec<String>>) -> Result<serde_json::Value, String> {
+    #[cfg(windows)] { tauri::async_runtime::spawn_blocking(move || shortcuts::list(paths)).await.map_err(|error| error.to_string())? }
+    #[cfg(not(windows))] { let _ = paths; Ok(serde_json::json!([])) }
+}
 
 #[tauri::command]
 fn desktop_position(window: tauri::WebviewWindow) -> Result<(i32, i32), String> {
@@ -27,7 +35,7 @@ pub fn run() {
     }
     use tauri::{menu::{Menu, MenuItem}, tray::TrayIconBuilder};
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![desktop_position, desktop_set_position, desktop_edit_mode])
+        .invoke_handler(tauri::generate_handler![desktop_position, desktop_set_position, desktop_edit_mode, desktop_shortcuts])
         .on_window_event(|window, event| {
             #[cfg(windows)]
             if matches!(event, tauri::WindowEvent::Focused(true)) {
