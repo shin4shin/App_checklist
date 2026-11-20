@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { eventDeadline } from './event-deadline.js';
+import { routinePeriod } from './event-routine.js';
 
 const source = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 const saveEdit = source.slice(source.indexOf('  const saveEdit ='), source.indexOf('  const deleteTask ='));
@@ -13,11 +14,11 @@ function editTask(category, resetMinute, editTime, originalEditTime = '2026-11-0
   let saved;
   runInNewContext(`${saveEdit}\nsaveEdit({ preventDefault() {} });`, {
     editingTask: task, editTitle: 'After', editTime, originalEditTime,
-    editDays: 1, editHours: 0, eventDeadline,
+    editDays: 1, editHours: 0, eventDeadline, editRoutine: false, routinePeriod, showToast() {},
     originalEditHours: 0,
     appSettings: [{ packageName: task.packageName, dailyResetMinute: 240 }],
     Date: class extends Date { static now() { return new Date('2026-11-05T16:37').getTime(); } },
-    setTasks: update => { saved = update([task])[0]; },
+    setTasks: update => { saved = update([overrides.editingTask || task])[0]; },
     setEditingTask() {},
     ...overrides,
   });
@@ -53,16 +54,39 @@ test('title-only edit preserves the deadline', () => {
   assert.equal(saved.title, 'After');
 });
 
-test('one event day uses the next calendar date and the task or game reset', () => {
-  for (const [reset, expected] of [[-1, '04:00'], [240, '04:00'], [385, '06:25']]) {
+test('only explicitly fixed event times use the reset clock', () => {
+  for (const [reset, expected] of [[-1, '16:00'], [240, '04:00'], [385, '06:25']]) {
     assert.equal(editTask('Event', reset, '').deadline, new Date('2026-11-06T' + expected).getTime());
   }
 });
 
-test('future dates use their reset time even when extra hours cross midnight', () => {
+test('unfixed durations keep hours across midnight and fixed durations use the reset clock', () => {
   const now = new Date('2026-11-05T16:37').getTime();
-  assert.equal(eventDeadline(now, 1, 2, 240), new Date('2026-11-06T04:00').getTime());
-  assert.equal(eventDeadline(now, 0, 8, 240), new Date('2026-11-06T04:00').getTime());
-  assert.equal(eventDeadline(now, 1, 8, 240), new Date('2026-11-07T04:00').getTime());
+  assert.equal(eventDeadline(now, 1, 2, 240), new Date('2026-11-06T18:00').getTime());
+  assert.equal(eventDeadline(now, 0, 8, 240), new Date('2026-11-06T00:00').getTime());
+  assert.equal(eventDeadline(now, 1, 8, 240), new Date('2026-11-07T00:00').getTime());
   assert.equal(eventDeadline(now, 0, 2, 240), new Date('2026-11-05T18:00').getTime());
+});
+
+test('event edit saves the interval from the previous deadline when routine is selected', () => {
+  const original = '2026-11-05T04:00';
+  const result = editTask('Event', -1, '', original, { editRoutine: true, editDays: 8 });
+  assert.equal(result.routineDays, routinePeriod(new Date(original).getTime(), result.deadline));
+});
+
+test('saving a changed event or personal time clears completion while a title-only edit preserves it', () => {
+  const original = '2026-11-05T04:00';
+  const completed = { packageName: 'personal', category: 'Personal', taskId: 'test', title: 'Before', done: true, deadline: new Date(original).getTime() };
+  const personal = editTask('Personal', -1, '2026-11-06T05:00', original, { editingTask: completed });
+  assert.equal(personal.done, false);
+  assert.equal(editTask('Personal', -1, original, original, { editingTask: completed }).done, true);
+  const event = { ...completed, category: 'Event' };
+  assert.equal(editTask('Event', -1, '', original, { editingTask: event }).done, false);
+  assert.equal(editTask('Event', -1, '', original, { editingTask: event, editDays: 0, editHours: 0, originalEditHours: 0 }).done, true);
+});
+
+test('11 days 16 hours stays independent of the default reset clock', () => {
+  const now = new Date('2026-11-20T17:37').getTime();
+  assert.equal(eventDeadline(now, 11, 16, 180), new Date('2026-12-02T09:00').getTime());
+  assert.equal(eventDeadline(now, 11, 16, 180, true), new Date('2026-12-02T03:00').getTime());
 });

@@ -41,7 +41,7 @@ class GameOverlayService : AccessibilityService() {
                         svc.hideAll()
                         svc.currentPkg = null
                     } else if (!svc.isMinimized && svc.overlayView != null) {
-                        svc.showOverlay(pkg)
+                        svc.refreshOverlay(pkg)
                     }
                 }
             }
@@ -83,7 +83,12 @@ class GameOverlayService : AccessibilityService() {
     private val handleWidth get() = dp(48) * 2 / 3
     private val handleHeight get() = dp(88) * 2 / 3
     private val isOnLeft get() = savedX == 0
-    private val panelWidth get() = minOf(dp(320), (screenBounds.width() * 0.85f).toInt() - handleWidth).coerceAtLeast(1)
+    private val panelWidth: Int
+        get() {
+            val bounds = screenBounds
+            val ratio = if (bounds.height() > bounds.width()) 0.6f else 0.85f
+            return minOf(dp(320), (bounds.width() * ratio).toInt() - handleWidth).coerceAtLeast(1)
+        }
     private fun handleY() = savedY.coerceIn(0, (screenBounds.height() - handleHeight).coerceAtLeast(0))
     private fun handleX() = if (isOnLeft) 0 else (screenBounds.width() - handleWidth).coerceAtLeast(0)
 
@@ -385,7 +390,33 @@ class GameOverlayService : AccessibilityService() {
     }
 
     // ─── 오버레이 뷰 생성 (WindowManager 미등록) ────────────────────────
+    private data class TaskRow(val category: String, var task: TaskItem, val view: View)
+    private val taskRows = mutableListOf<TaskRow>()
+
+    private fun updateTaskRow(binding: TaskRow, animate: Boolean = false) {
+        val task = binding.task
+        applyCheckStyle(binding.view.findViewById(R.id.tvTaskCheck), task.done, animate)
+        binding.view.contentDescription = "${task.title}, ${if (task.done) "완료" else "미완료"}" +
+            if (binding.category == "Event") ", ${EventDeadline.label(task.deadline)}" else ""
+    }
+
+    private fun refreshOverlay(pkg: String) {
+        val repository = TaskRepository(this)
+        val latest = categories.flatMap { category -> repository.tasks(pkg, category.key).map { category.key to it } }
+        if (latest.size != taskRows.size || latest.zip(taskRows).any { (entry, row) ->
+                entry.first != row.category || entry.second.copy(done = false) != row.task.copy(done = false)
+            }) {
+            showOverlay(pkg)
+            return
+        }
+        latest.zip(taskRows).forEach { (entry, row) ->
+            row.task = entry.second
+            updateTaskRow(row)
+        }
+    }
+
     private fun buildOverlayView(pkg: String): View {
+        taskRows.clear()
         val inflater = LayoutInflater.from(this)
         val view = inflater.inflate(R.layout.overlay_game_tasks, null)
 
@@ -437,17 +468,48 @@ class GameOverlayService : AccessibilityService() {
                 }
                 row.minimumHeight = (48 * dp).toInt()
                 row.isFocusable = true
-                row.contentDescription = "${task.title}, ${if (task.done) "완료" else "미완료"}" +
-                    if (category.key == "Event") ", ${EventDeadline.label(task.deadline)}" else ""
-                applyCheckStyle(check, task.done)
+                val binding = TaskRow(category.key, task, row)
+                taskRows.add(binding)
+                updateTaskRow(binding)
+                var touchX = 0f
+                var touchY = 0f
+                var touchCancelled = false
+                val touchSlop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+                row.setOnTouchListener { _, event ->
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            touchX = event.x; touchY = event.y; touchCancelled = false
+                            applyCheckStyle(check, !binding.task.done, animate = true)
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            if (!touchCancelled && (abs(event.x - touchX) > touchSlop || abs(event.y - touchY) > touchSlop)) {
+                                touchCancelled = true
+                                applyCheckStyle(check, binding.task.done, animate = true)
+                            }
+                        }
+                        MotionEvent.ACTION_CANCEL -> {
+                            touchCancelled = true
+                            applyCheckStyle(check, binding.task.done, animate = true)
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            row.isPressed = false
+                            if (!touchCancelled) row.performClick()
+                            return@setOnTouchListener true
+                        }
+                    }
+                    false
+                }
                 row.setOnClickListener {
-                    repository.setTaskDone(pkg, category.key, task.id, !task.done)
+                    val done = !binding.task.done
+                    binding.task = binding.task.copy(done = done)
+                    updateTaskRow(binding, animate = true)
+                    repository.setTaskDone(pkg, category.key, task.id, done, asyncRefresh = true)
                 }
                 if (category.key == "Event") {
                     row.findViewById<TextView>(R.id.btnOverlayDeadline).apply {
                         visibility = View.VISIBLE
                         contentDescription = "${task.title} 시간 설정"
-                        setOnClickListener { showEventDeadlineDialog(pkg, task) }
+                        setOnClickListener { showEventDeadlineDialog(pkg, binding.task) }
                     }
                 }
                 container.addView(row)
@@ -591,6 +653,7 @@ class GameOverlayService : AccessibilityService() {
         tabLongPressRunnable = longPress
         tab.setOnClickListener { expandFromTab(pkg) }
         tab.setOnTouchListener { _, event ->
+            if (tabView !== tab) return@setOnTouchListener true
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     tabMorphAnimator?.end()
@@ -671,10 +734,11 @@ class GameOverlayService : AccessibilityService() {
     }
 
     private fun prepareRevealOverlay(pkg: String) {
+        if (revealOverlayView != null || overlayView != null) return
         val root = buildDrawer(pkg)
         setReveal(root, 0f)
-        windowManager?.addView(root, drawerParams())
         revealOverlayView = root
+        windowManager?.addView(root, drawerParams())
     }
 
     private fun completeReveal() {
@@ -682,8 +746,9 @@ class GameOverlayService : AccessibilityService() {
         overlayView = root
         revealOverlayView = null
         isMinimized = false
-        tabView?.let { windowManager?.removeView(it) }
+        val tab = tabView
         tabView = null
+        tab?.let { windowManager?.removeView(it) }
         animateReveal(root, 1f)
     }
 
@@ -827,6 +892,8 @@ class GameOverlayService : AccessibilityService() {
     }
 
     private fun hideAll() {
+        taskRows.forEach { (it.view.findViewById<TextView>(R.id.tvTaskCheck).background as? OverlayCheckDrawable)?.stop() }
+        taskRows.clear()
         tabMorphAnimator?.cancel()
         tabMorphAnimator = null
         tabLongPressRunnable?.let { handler.removeCallbacks(it) }
@@ -837,17 +904,12 @@ class GameOverlayService : AccessibilityService() {
         }
         headerLongPressRunnable?.let { handler.removeCallbacks(it) }
         headerLongPressRunnable = null
-        overlayView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            overlayView = null
-        }
-        tabView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            tabView = null
-        }
-        revealOverlayView?.let {
-            try { windowManager?.removeView(it) } catch (e: Exception) { }
-            revealOverlayView = null
+        val windows = listOfNotNull(overlayView, tabView, revealOverlayView)
+        overlayView = null
+        tabView = null
+        revealOverlayView = null
+        windows.forEach {
+            try { windowManager?.removeView(it) } catch (_: Exception) { }
         }
         hideDeleteZone()
     }
@@ -872,9 +934,11 @@ class GameOverlayService : AccessibilityService() {
         PixelFormat.TRANSLUCENT
     )
 
-    private fun applyCheckStyle(tvCheck: TextView, isDone: Boolean) {
-        tvCheck.text = if (isDone) "✓" else "○"
-        tvCheck.setTextColor(if (isDone) Color.parseColor("#3FB950") else Color.parseColor("#8B949E"))
+    private fun applyCheckStyle(tvCheck: TextView, isDone: Boolean, animate: Boolean = false) {
+        tvCheck.text = ""
+        val drawable = tvCheck.background as? OverlayCheckDrawable
+        if (drawable == null) tvCheck.background = OverlayCheckDrawable(isDone)
+        else drawable.setChecked(isDone, animate)
     }
 
     override fun onInterrupt() { hideAll() }

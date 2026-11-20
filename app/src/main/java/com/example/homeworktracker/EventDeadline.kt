@@ -44,8 +44,7 @@ object EventDeadline {
             add(Calendar.DATE, (duration / 86_400_000L).toInt())
             timeInMillis += duration % 86_400_000L
         }
-        if (fixed || start.get(Calendar.YEAR) != target.get(Calendar.YEAR) ||
-            start.get(Calendar.DAY_OF_YEAR) != target.get(Calendar.DAY_OF_YEAR)) {
+        if (fixed) {
             target.set(Calendar.HOUR_OF_DAY, resetMinute / 60)
             target.set(Calendar.MINUTE, resetMinute % 60)
         } else target.set(Calendar.MINUTE, 0)

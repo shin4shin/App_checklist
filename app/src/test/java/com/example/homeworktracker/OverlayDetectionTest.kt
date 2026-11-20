@@ -16,6 +16,69 @@ import java.time.Duration
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class OverlayDetectionTest {
+    @Test fun touchDownPreviewsCheckAndScrollingCancelsWithoutSaving() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        val repo = TaskRepository(service)
+        repo.addApp("game.touch", "Daily")
+        val root = GameOverlayService::class.java.getDeclaredMethod("buildOverlayView", String::class.java).apply { isAccessible = true }.invoke(service, "game.touch") as android.view.View
+        val row = root.findViewById<android.widget.LinearLayout>(R.id.taskContainer).getChildAt(1)
+        row.layout(0, 0, 300, 100)
+        val icon = row.findViewById<android.widget.TextView>(R.id.tvTaskCheck).background as OverlayCheckDrawable
+        fun target() = OverlayCheckDrawable::class.java.getDeclaredField("target").apply { isAccessible = true }.getBoolean(icon)
+        fun touch(action: Int, y: Float = 5f) {
+            val event = android.view.MotionEvent.obtain(0, 0, action, 5f, y, 0)
+            row.dispatchTouchEvent(event); event.recycle()
+        }
+        touch(android.view.MotionEvent.ACTION_DOWN)
+        assertTrue(target())
+        assertFalse(repo.tasks("game.touch", "Daily").first().done)
+        touch(android.view.MotionEvent.ACTION_CANCEL)
+        assertFalse(target())
+        touch(android.view.MotionEvent.ACTION_DOWN)
+        touch(android.view.MotionEvent.ACTION_MOVE, 500f)
+        touch(android.view.MotionEvent.ACTION_UP, 500f)
+        assertFalse(target())
+        assertFalse(row.isPressed)
+        assertFalse(repo.tasks("game.touch", "Daily").first().done)
+        touch(android.view.MotionEvent.ACTION_DOWN)
+        touch(android.view.MotionEvent.ACTION_UP)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(repo.tasks("game.touch", "Daily").first().done)
+        controller.destroy()
+    }
+
+    @Test fun checkingKeepsWindowAndRowWhileRepeatedClicksAndExternalChangesStayInSync() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        val repo = TaskRepository(service)
+        repo.addApp("game.check", "Daily")
+        val task = repo.tasks("game.check", "Daily").first()
+        GameOverlayService::class.java.getDeclaredMethod("handleForegroundPackage", String::class.java).apply { isAccessible = true }.invoke(service, "game.check")
+        GameOverlayService::class.java.getDeclaredMethod("showOverlay", String::class.java).apply { isAccessible = true }.invoke(service, "game.check")
+        GameOverlayService::class.java.getDeclaredField("isMinimized").apply { isAccessible = true }.setBoolean(service, false)
+        val root = field(service, "overlayView") as android.view.View
+        val container = root.findViewById<android.widget.LinearLayout>(R.id.taskContainer)
+        val row = container.getChildAt(1)
+        row.performClick()
+        assertTrue(row.contentDescription.contains("완료"))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertSame(root, field(service, "overlayView"))
+        assertSame(row, container.getChildAt(1))
+        assertTrue(repo.tasks("game.check", "Daily").first().done)
+        row.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(repo.tasks("game.check", "Daily").first().done)
+        repo.setTaskDone("game.check", "Daily", task.id, true)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertSame(root, field(service, "overlayView"))
+        assertFalse(row.contentDescription.contains("미완료"))
+        repo.addTask("game.check", "Daily", "추가 항목")
+        shadowOf(Looper.getMainLooper()).idle()
+        assertNotSame(root, field(service, "overlayView"))
+        controller.destroy()
+    }
+
     @Test fun longPressMorphsHandleAndOnlyAnActualDragSavesPosition() {
         val controller = Robolectric.buildService(GameOverlayService::class.java).create()
         val service = controller.get()

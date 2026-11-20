@@ -21,6 +21,7 @@ import { syncApi } from './services/api';
 import { shouldApplyRemote, isAppVisible, appDisplayName } from './services/sync-merge';
 import DateTimePicker from './DateTimePicker';
 import { eventDeadline } from './services/event-deadline';
+import { routinePeriod, advanceEventRoutine } from './services/event-routine';
 import TimeNumberInput from './TimeNumberInput';
 import { isDesktopGame, mergeGameSettings, desktopNameRepairs } from './services/desktop-games';
 
@@ -67,6 +68,7 @@ export default function App() {
   const [editTitle, setEditTitle] = useState('');
   const [editTime, setEditTime] = useState('');
   const [originalEditTime, setOriginalEditTime] = useState('');
+  const [editRoutine, setEditRoutine] = useState(false);
   const [editDays, setEditDays] = useState(0);
   const [editHours, setEditHours] = useState(0);
   const [originalEditHours, setOriginalEditHours] = useState(0);
@@ -115,13 +117,19 @@ export default function App() {
   useEffect(() => {
     let timer;
     const refresh = () => {
+      clearTimeout(timer);
       const now = Date.now();
       setDeadlineNow(now);
+      setTasks(previous => {
+        const next = previous.map(task => advanceEventRoutine(task, now));
+        return next.some((task, index) => task !== previous[index]) ? next : previous;
+      });
       const next = Math.min(...tasks.filter(task => !task.isDeleted && task.deadline > now).map(task => task.deadline));
       if (Number.isFinite(next)) timer = setTimeout(refresh, Math.min(next - now, 2147483647));
     };
     refresh();
-    return () => clearTimeout(timer);
+    window.addEventListener('focus', refresh);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', refresh); };
   }, [tasks]);
   useEffect(() => {
     localStorage.setItem('pending_app_settings', JSON.stringify(pendingSettings));
@@ -336,6 +344,7 @@ export default function App() {
     const date = new Date(task.deadline || 0);
     const time = task.deadline > 0 ? new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '';
     setEditingTask(task);
+    setEditRoutine(false);
     setEditTitle(task.title);
     setEditTime(time);
     setOriginalEditTime(time);
@@ -360,8 +369,13 @@ export default function App() {
       if (date && editingTask.category !== 'Personal' && editingTask.resetMinute >= 0) date.setHours(Math.floor(editingTask.resetMinute / 60), editingTask.resetMinute % 60, 0, 0);
       deadline = date?.getTime() || 0;
     }
+    let routineDays = editingTask.routineDays || 0;
+    if (editingTask.category === 'Event' && editRoutine) {
+      try { routineDays = routinePeriod(editingTask.deadline, deadline); }
+      catch (error) { showToast(error.message); return; }
+    }
     setTasks(previous => previous.map(task => task.packageName === editingTask.packageName && task.category === editingTask.category && task.taskId === editingTask.taskId
-      ? { ...task, title: editTitle.trim(), deadline, updatedAt: Date.now() } : task));
+      ? { ...task, title: editTitle.trim(), deadline, routineDays, done: deadline !== editingTask.deadline ? false : task.done, updatedAt: Date.now() } : task));
     setEditingTask(null);
   };
   const deleteTask = (task, e) => {
@@ -1006,6 +1020,10 @@ export default function App() {
                   <TimeNumberInput label="남은 일" max={3650} value={editDays} onChange={setEditDays} /><span>일</span>
                   <TimeNumberInput label="남은 시간" max={23} value={editHours} onChange={setEditHours} /><span>시간 후</span>
                 </div>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={editRoutine} disabled={!(editingTask.deadline > 0)} onChange={event => setEditRoutine(event.target.checked)} />
+                  이전 종료 시간과의 간격으로 루틴 설정
+                </label>
               </div>
             )}
             <div className="flex justify-end gap-2">

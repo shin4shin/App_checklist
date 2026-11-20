@@ -166,8 +166,8 @@ class EventDeadlineTest {
         val pkg = context.packageName
         val repo = TaskRepository(context)
         repo.addApp(pkg, "Event")
-        repo.setDone(pkg, "Event", true)
         EventDeadline.save(context, listOf(pkg), 60_000L, System.currentTimeMillis() - 120_000L)
+        repo.setDone(pkg, "Event", true)
         ResetReceiver().onReceive(context, Intent().putExtra("target_package", pkg).putExtra("target_category", "Event"))
         assertTrue(repo.isDone(pkg, "Event"))
         assertTrue(EventDeadline.label(context, pkg).startsWith("종료됨 ·"))

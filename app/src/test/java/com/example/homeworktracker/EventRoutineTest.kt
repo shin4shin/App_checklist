@@ -15,6 +15,40 @@ import java.time.ZoneId
 class EventRoutineTest {
     private fun time(day: Int) = LocalDate.of(2026, 11, day).atTime(9, 30).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
+    @Test fun routineButtonUsesNewSelectionAndPreviousDeadlineInsteadOfOpeningRangeCalendar() {
+        val controller = org.robolectric.Robolectric.buildActivity(HomeActivity::class.java).setup()
+        val previous = System.currentTimeMillis() + 86_400_000L
+        var saved: Pair<Long, Long>? = null
+        val dialog = EventDeadlineDialog.show(controller.get(), "반복", previous,
+            onRoutine = { deadline, period -> saved = deadline to period }) { fail("일반 저장 대신 루틴 저장이어야 함") }
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).performClick()
+        assertFalse(dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).isEnabled)
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).performClick()
+        dialog.findViewById<android.widget.NumberPicker>(R.id.eventDaysPicker)!!.value = 3
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).performClick()
+        assertTrue(dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).isEnabled)
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).performClick()
+        val result = requireNotNull(saved)
+        assertTrue(result.first > previous)
+        assertEquals(EventRoutine.period(previous, result.first), result.second)
+        controller.pause().stop().destroy()
+    }
+
+    @Test fun newDeadlineDefinesExactIntervalAndResetsCompletion() {
+        val previous = time(8)
+        val next = time(15)
+        assertEquals(7L, EventRoutine.period(previous, next))
+        val interval = 2 * 86_400_000L + 3 * 3_600_000L + 15 * 60_000L
+        val task = TaskItem(title = "분 단위 반복", deadline = previous + interval,
+            routineDays = EventRoutine.period(previous, previous + interval), done = true)
+        assertEquals(task, EventRoutine.advance(task, task.deadline - 1))
+        assertEquals(task.copy(deadline = task.deadline + interval, done = false), EventRoutine.advance(task, task.deadline))
+        assertEquals(task.deadline + interval * 4, EventRoutine.advance(task, task.deadline + interval * 3).deadline)
+        assertThrows(IllegalArgumentException::class.java) { EventRoutine.period(previous, previous) }
+        assertThrows(IllegalArgumentException::class.java) { EventRoutine.period(0, next) }
+    }
+
     @Test fun repeatsAtBoundaryAndSkipsMissedCyclesWithoutChangingTime() {
         val task = TaskItem(title = "루틴", deadline = time(8), routineDays = 7, done = true)
         assertEquals(task, EventRoutine.advance(task, time(8) - 1))

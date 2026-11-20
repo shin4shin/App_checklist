@@ -16,6 +16,7 @@ class TaskRepository(context: Context) {
         const val STORE = "checklist_v2"
         val categories = listOf("Daily", "Weekly", "Event")
         private val lock = Any()
+        internal val refreshExecutor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
     }
 
     init { synchronized(lock) { migrate(); migrateEventDeadlines() } }
@@ -108,13 +109,13 @@ class TaskRepository(context: Context) {
         if (items.isEmpty()) group.optBoolean("emptyDone") else items.all { it.done }
     }
 
-    private fun change(pkg: String, edit: (JSONObject) -> Unit) {
+    private fun change(pkg: String, asyncRefresh: Boolean = false, edit: (JSONObject) -> Unit) {
         synchronized(lock) {
             val root = root()
             edit(root)
             prefs.edit().putString("data", root.toString()).apply()
         }
-        refresh(pkg)
+        if (asyncRefresh) refreshExecutor.execute { refresh(pkg) } else refresh(pkg)
     }
 
     fun addApp(pkg: String, category: String) {
@@ -157,7 +158,11 @@ class TaskRepository(context: Context) {
             val app = root.optJSONObject(pkg) ?: return@change
             if (!app.has(category)) return@change
             val latest = decode(app.optJSONObject(category)).associateBy { it.id }
-            app.put(category, encode(items.map { EventResetTime.apply(it.copy(done = latest[it.id]?.done ?: false)) }))
+            app.put(category, encode(items.map { item ->
+                val adjusted = EventResetTime.apply(item)
+                val previous = latest[item.id]
+                adjusted.copy(done = previous?.done == true && previous.deadline == adjusted.deadline)
+            }))
         }
 
         if (category == "Event") ResetScheduler.schedule(context, pkg, category)
@@ -172,14 +177,14 @@ class TaskRepository(context: Context) {
     }
 
     fun advanceRoutines(pkg: String, now: Long = System.currentTimeMillis()) {
-        if (tasks(pkg, "Event").none { it.routineDays > 0 && it.deadline in 1..now }) return
+        if (tasks(pkg, "Event").none { it.routineDays != 0L && it.deadline in 1..now }) return
         change(pkg) { root ->
             val app = root.optJSONObject(pkg) ?: return@change
             app.put("Event", encode(decode(app.optJSONObject("Event")).map { EventRoutine.advance(it, now) }))
         }
     }
 
-    fun setTaskDone(pkg: String, category: String, id: String, done: Boolean) = change(pkg) { root ->
+    fun setTaskDone(pkg: String, category: String, id: String, done: Boolean, asyncRefresh: Boolean = false) = change(pkg, asyncRefresh) { root ->
         val app = root.optJSONObject(pkg) ?: return@change
         if (!app.has(category)) return@change
         app.put(category, encode(decode(app.optJSONObject(category)).map { if (it.id == id) it.copy(done = done) else it }))

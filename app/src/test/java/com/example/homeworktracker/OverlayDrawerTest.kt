@@ -29,6 +29,26 @@ class OverlayDrawerTest {
         event.recycle()
     }
 
+    @Test fun staleHandleEventsCannotRecreateHandleOrLeaveDuplicateDrawer() {
+        val controller = Robolectric.buildService(GameOverlayService::class.java).create()
+        val service = controller.get()
+        TaskRepository(service).addApp("game.transition", "Daily")
+        enter(service, "game.transition")
+        val oldHandle = field(service, "tabView")!!
+        val prepare = GameOverlayService::class.java.getDeclaredMethod("prepareRevealOverlay", String::class.java).apply { isAccessible = true }
+        prepare.invoke(service, "game.transition")
+        val preview = field(service, "revealOverlayView")!!
+        prepare.invoke(service, "game.transition")
+        assertSame(preview, field(service, "revealOverlayView"))
+        GameOverlayService::class.java.getDeclaredMethod("completeReveal").apply { isAccessible = true }.invoke(service)
+        touch(oldHandle, MotionEvent.ACTION_CANCEL, 10f, 10f)
+        touch(oldHandle, MotionEvent.ACTION_UP, 10f, 10f)
+        assertSame(preview, field(service, "overlayView"))
+        assertNull(field(service, "tabView"))
+        assertNull(field(service, "revealOverlayView"))
+        controller.destroy()
+    }
+
     @Test fun movedHandleKeepsPositionAcrossAppsAndServiceRestart() {
         val controller = Robolectric.buildService(GameOverlayService::class.java).create()
         val service = controller.get()

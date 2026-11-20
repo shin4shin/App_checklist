@@ -67,8 +67,9 @@ class WidgetCollectionsTest {
             val row = (0 until tasks.childCount).map { tasks.getChildAt(it) }.first {
                 it.findViewById<TextView>(R.id.tvTaskName)?.text?.startsWith(one.title) == true
             }
-            assertEquals("✓", row.findViewById<TextView>(R.id.tvTaskCheck).text)
+            assertNotNull(row.findViewById<TextView>(R.id.tvTaskCheck).background)
             row.performClick()
+            TaskRepository.refreshExecutor.submit {}.get()
             assertFalse(WidgetCollections.rows(context, "homework", category)[0].done)
             val updated = widgetTestView(context, manager, widget).findViewById<ListView>(R.id.widgetItems)
             assertEquals("○", updated.adapter.getView(0, null, updated).findViewById<TextView>(R.id.widgetCheck).text)

@@ -209,11 +209,18 @@ class DailyFragment : Fragment() {
             popup.menu.add(0, 1, 0, "정렬")
             popup.menu.add(0, 2, 1, "선택")
             popup.menu.add(0, 3, 2, "오버레이 설정")
+            popup.menu.add(0, 4, 3, "앱별 설정")
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> showSortDialog()
                     2 -> adapter.enterSelectionMode()
                     3 -> showOverlaySetupDialog()
+                    4 -> {
+                        val apps = getAddedAppPackages().mapNotNull { SharedGameInfo.resolve(requireContext(), it) }.sortedBy { it.name }
+                        AlertDialog.Builder(requireContext()).setTitle("앱별 설정")
+                            .setItems(apps.map { it.name }.toTypedArray()) { _, index -> showTaskDialog(apps[index]) }
+                            .setNegativeButton("취소", null).show()
+                    }
                 }
                 true
             }
@@ -338,7 +345,7 @@ class DailyFragment : Fragment() {
     private fun refreshAppList() {
         val packages = getAddedAppPackages()
         appList.clear()
-        appList.addAll(packages.mapNotNull { SharedGameInfo.resolve(requireContext(), it) }.sortedBy { it.name })
+        appList.addAll(packages.filter { TaskRepository(requireContext()).tasks(it, category).isNotEmpty() }.mapNotNull { SharedGameInfo.resolve(requireContext(), it) }.sortedBy { it.name })
         adapter.refreshSort()
         adapter.notifyDataSetChanged()
     }
@@ -373,12 +380,13 @@ class DailyFragment : Fragment() {
                 holder.itemView.findViewById<TextView>(R.id.tvTaskItem).text = task.title
                 holder.itemView.findViewById<TextView>(R.id.tvTaskDeadline).apply {
                     visibility = if (category == "Event") View.VISIBLE else View.GONE
-                    text = EventDeadline.label(task.deadline) + if (task.resetMinute >= 0) " · ${EventResetTime.label(task.resetMinute)} 고정" else ""
+                    text = EventDeadline.label(task.deadline)
                 }
+                holder.itemView.foreground = if (category == "Event" && task.resetMinute in 0..1439) ctx.getDrawable(R.drawable.event_fixed_time_border) else null
                 if (category == "Event") holder.itemView.apply {
                     isClickable = true
                     isFocusable = true
-                    contentDescription = if (selecting) "${task.title} 선택" else "${task.title} 시간 설정"
+                    contentDescription = (if (selecting) "${task.title} 선택" else "${task.title} 시간 설정") + if (task.resetMinute in 0..1439) ", 공통 초기화 시간 고정" else ""
                     setOnLongClickListener {
                         selecting = true
                         selectedTasks.add(task.id)

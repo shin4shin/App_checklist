@@ -213,7 +213,7 @@ class SyncManager(context: Context) {
                     val deadline = obj.optLong("deadline", 0L)
                     val done = obj.optBoolean("done", false)
                     if (existing == null || existing.title != title || existing.deadline != deadline) personal.save(TaskItem(id, title, deadline = deadline))
-                    if (existing?.done != done) personal.setDone(id, done)
+                    if (personal.plans().find { it.id == id }?.done != done) personal.setDone(id, done)
                 }
                 continue
             }

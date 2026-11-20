@@ -9,8 +9,19 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 object EventRoutine {
+    fun period(previous: Long, next: Long): Long {
+        require(previous > 0 && next > previous)
+        val interval = next - previous
+        return if (interval % 86_400_000L == 0L) interval / 86_400_000L else -interval
+    }
+
     fun advance(task: TaskItem, now: Long): TaskItem {
-        if (task.routineDays <= 0 || task.deadline <= 0 || task.deadline > now) return task
+        if (task.routineDays == 0L || task.deadline <= 0 || task.deadline > now) return task
+        if (task.routineDays < 0) {
+            val interval = -task.routineDays
+            val cycles = (now - task.deadline) / interval + 1
+            return EventResetTime.apply(task.copy(deadline = task.deadline + cycles * interval, done = false))
+        }
         val zone = ZoneId.systemDefault()
         val original = Instant.ofEpochMilli(task.deadline).atZone(zone)
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()

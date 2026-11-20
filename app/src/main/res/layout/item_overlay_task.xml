@@ -6,7 +6,6 @@
     android:gravity="center_vertical"
     android:paddingStart="6dp"
     android:paddingEnd="8dp"
-    android:foreground="@drawable/ripple_overlay_task"
     android:clickable="true"
     android:focusable="true">
 
@@ -14,7 +13,7 @@
         android:id="@+id/tvTaskCheck"
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:text="○"
+        android:background="@drawable/ic_overlay_unchecked"
         android:textSize="18sp"
         android:textColor="#8B949E"
         android:gravity="center" />

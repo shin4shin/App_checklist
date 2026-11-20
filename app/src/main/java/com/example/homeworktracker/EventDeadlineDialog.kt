@@ -45,6 +45,8 @@ object EventDeadlineDialog {
         hours.value = initialHours
         fun unchanged() = currentDeadline > 0 && days.value == initialDays && hours.value == initialHours
         fun duration() = days.value * 86_400_000L + hours.value * 3_600_000L
+        var routine = false
+        fun selectedDeadline() = if (unchanged()) currentDeadline else EventDeadline.calculate(System.currentTimeMillis(), duration(), resetMinute, fixed)
         val preview = content.findViewById<TextView>(R.id.eventDeadlinePreview)
         val dialog = builder.setView(content)
             .setNegativeButton("취소", null).setPositiveButton("저장", null)
@@ -62,7 +64,13 @@ object EventDeadlineDialog {
                 }
                 setOnClickListener {
                     EventCalendarDialog.show(context, currentDeadline, windowType, resetMinute, fixed) { deadline ->
-                        onDateSave(deadline)
+                        if (routine) {
+                            if (deadline <= currentDeadline) {
+                                android.widget.Toast.makeText(context, "이전 종료 시간보다 늦게 설정해 주세요.", android.widget.Toast.LENGTH_SHORT).show()
+                                return@show
+                            }
+                            onRoutine?.invoke(deadline, EventRoutine.period(currentDeadline, deadline))
+                        } else onDateSave(deadline)
                         dialog.dismiss()
                     }
                 }
@@ -70,7 +78,7 @@ object EventDeadlineDialog {
         }
         fun validate() {
             val duration = duration()
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = unchanged() || duration > 0
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = (unchanged() || duration > 0) && (!routine || selectedDeadline() > currentDeadline)
             if (compact) {
                 preview.visibility = android.view.View.GONE
                 return
@@ -84,17 +92,26 @@ object EventDeadlineDialog {
         dialog.setOnShowListener {
             validate()
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
-                EventRoutine.showCalendar(context, currentDeadline, windowType) { deadline, period ->
-                    onRoutine?.invoke(deadline, period)
-                    dialog.dismiss()
+                if (currentDeadline <= 0) {
+                    android.widget.Toast.makeText(context, "종료 시간을 먼저 저장해 주세요.", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
+                routine = !routine
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).text = if (routine) "루틴 켜짐" else "루틴"
+                validate()
             }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 days.clearFocus()
                 hours.clearFocus()
-                if (unchanged()) { dialog.dismiss(); return@setOnClickListener }
-                if (duration() == 0L) return@setOnClickListener
-                onSave(duration())
+                if (routine) {
+                    val next = selectedDeadline()
+                    if (next <= currentDeadline) return@setOnClickListener
+                    onRoutine?.invoke(next, EventRoutine.period(currentDeadline, next))
+                } else {
+                    if (unchanged()) { dialog.dismiss(); return@setOnClickListener }
+                    if (duration() == 0L) return@setOnClickListener
+                    onSave(duration())
+                }
                 dialog.dismiss()
             }
         }

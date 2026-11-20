@@ -30,7 +30,12 @@ class PersonalPlanRepository(context: Context) {
         require(item.deadline >= 0)
         change { items ->
             val normalized = item.copy(title = item.title.trim())
-            if (items.any { it.id == item.id }) items.map { if (it.id == item.id) normalized.copy(done = it.done) else it }
+            if (items.any { it.id == item.id }) items.map {
+                if (it.id == item.id) {
+                    if (it.done && it.deadline != normalized.deadline) PersonalWidgetOrder.record(context, it.id, false)
+                    normalized.copy(done = it.done && it.deadline == normalized.deadline)
+                } else it
+            }
             else items + normalized.copy(done = false)
         }
     }
