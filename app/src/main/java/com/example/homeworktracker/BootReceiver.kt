@@ -10,6 +10,7 @@ class BootReceiver : BroadcastReceiver() {
             ResetScheduler.restore(context)
             DeadlineNotifications.sync(context)
             PersonalWidget.updateAllWidgets(context)
+            LockScreenWidget.updateAllWidgets(context)
         }
     }
 }

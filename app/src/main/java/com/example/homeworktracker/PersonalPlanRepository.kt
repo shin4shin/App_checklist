@@ -23,6 +23,7 @@ class PersonalPlanRepository(context: Context) {
             prefs.edit().putString("plans", array.toString()).apply()
         }
         PersonalWidget.updateAllWidgets(context)
+        LockScreenWidget.updateAllWidgets(context)
         DeadlineNotifications.sync(context)
     }
     fun save(item: TaskItem) {

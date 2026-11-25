@@ -196,6 +196,7 @@ class TaskRepository(context: Context) {
     }
 
     fun refresh(pkg: String) {
+        LockScreenWidget.updateAllWidgets(this.context)
         HomeworkWidget.updateAllWidgets(context)
         MiniWidget.updateAllWidgets(context)
         SmallWidget.updateAllWidgets(context)
